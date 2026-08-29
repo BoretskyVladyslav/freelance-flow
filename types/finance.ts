@@ -13,7 +13,7 @@ export const PAYMENT_STATUSES = ["Pending", "Paid", "In Progress"] as const;
 export type PaymentStatus = (typeof PAYMENT_STATUSES)[number];
 
 export const BASE_CURRENCY = "EUR" as const;
-export const BACKUP_SCHEMA_VERSION = 1;
+export const BACKUP_SCHEMA_VERSION = 2;
 
 export type Transaction = {
   id: string;
@@ -24,6 +24,9 @@ export type Transaction = {
   customFee: number;
   exchangeRateAtCreation: number;
   date: string;
+  startDate?: string;
+  endDate?: string;
+  payoutDate?: string;
   status: PaymentStatus;
   weekNumber: number;
   notes?: string;
@@ -95,6 +98,16 @@ function isIsoDate(value: unknown): value is string {
   return Number.isFinite(parsed);
 }
 
+function isOptionalIsoDate(value: unknown): value is string | undefined {
+  return value === undefined || isIsoDate(value);
+}
+
+export function getTransactionStartDate(
+  transaction: Pick<Transaction, "date" | "startDate">,
+): string {
+  return transaction.startDate || transaction.date;
+}
+
 export function isTransaction(value: unknown): value is Transaction {
   if (!value || typeof value !== "object") return false;
   const row = value as Record<string, unknown>;
@@ -108,6 +121,9 @@ export function isTransaction(value: unknown): value is Transaction {
     return false;
   }
   if (!isIsoDate(row.date)) return false;
+  if (!isOptionalIsoDate(row.startDate)) return false;
+  if (!isOptionalIsoDate(row.endDate)) return false;
+  if (!isOptionalIsoDate(row.payoutDate)) return false;
   if (!isPaymentStatus(row.status)) return false;
   if (
     !isFiniteNumber(row.weekNumber) ||

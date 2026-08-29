@@ -4,7 +4,11 @@ import { useMemo } from "react";
 import { useFinance } from "@/components/finance/finance-provider";
 import { PLATFORM_LABELS, STATUS_LABELS } from "@/lib/labels";
 import { monthKeyFromIsoDate, weekKeyFromIsoDate } from "@/lib/week";
-import { PAYMENT_STATUSES, PLATFORMS } from "@/types/finance";
+import {
+  PAYMENT_STATUSES,
+  PLATFORMS,
+  getTransactionStartDate,
+} from "@/types/finance";
 import {
   Select,
   SelectContent,
@@ -17,11 +21,15 @@ export function LedgerFilters() {
   const { filters, setFilters, transactions } = useFinance();
 
   const months = useMemo(() => {
-    return Array.from(new Set(transactions.map((row) => monthKeyFromIsoDate(row.date)))).sort();
+    return Array.from(
+      new Set(transactions.map((row) => monthKeyFromIsoDate(getTransactionStartDate(row)))),
+    ).sort();
   }, [transactions]);
 
   const weeks = useMemo(() => {
-    return Array.from(new Set(transactions.map((row) => weekKeyFromIsoDate(row.date)))).sort();
+    return Array.from(
+      new Set(transactions.map((row) => weekKeyFromIsoDate(getTransactionStartDate(row)))),
+    ).sort();
   }, [transactions]);
 
   return (

@@ -80,7 +80,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
   const [snapshot, setSnapshot] = useState<FinanceSnapshot>({
     transactions: [],
     lastKnownRates: null,
-    displayCurrency: "EUR",
+    displayCurrency: "UAH",
   });
   const [filters, setFilters] = useState<LedgerFilters>(DEFAULT_FILTERS);
   const exchange = useExchangeRates(snapshot.lastKnownRates);
@@ -133,7 +133,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
       const next: Transaction = {
         ...input,
         id: createId(),
-        weekNumber: isoWeekFromIsoDate(input.date),
+        weekNumber: isoWeekFromIsoDate(input.startDate || input.date),
         exchangeRateAtCreation,
         title: input.title.trim(),
         notes: input.notes?.trim() ? input.notes.trim() : undefined,
@@ -152,8 +152,10 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
       transactions: current.transactions.map((transaction) => {
         if (transaction.id !== id) return transaction;
         const merged = { ...transaction, ...patch };
-        if (patch.date) {
-          merged.weekNumber = isoWeekFromIsoDate(patch.date);
+        if (patch.startDate || patch.date) {
+          merged.weekNumber = isoWeekFromIsoDate(
+            patch.startDate || patch.date || transaction.startDate || transaction.date,
+          );
         }
         return {
           ...merged,

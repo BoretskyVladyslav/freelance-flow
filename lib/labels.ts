@@ -12,3 +12,9 @@ export const STATUS_LABELS: Record<PaymentStatus, string> = {
   Paid: "Виплачено",
   "In Progress": "В процесі",
 };
+
+export const STATUS_DESCRIPTIONS: Record<PaymentStatus, string> = {
+  "In Progress": "Проєкт активно розробляється.",
+  Pending: "Проєкт завершено, виплата очікується.",
+  Paid: "Виплату отримано.",
+};

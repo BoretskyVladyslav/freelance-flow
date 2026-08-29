@@ -1,12 +1,26 @@
 "use client";
 
+import { useState } from "react";
 import { MoreHorizontal } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
@@ -29,7 +43,13 @@ import { useFinance } from "@/components/finance/finance-provider";
 import { formatDate, formatMoney, formatSignedMoney } from "@/lib/format";
 import { PLATFORM_LABELS, STATUS_LABELS } from "@/lib/labels";
 import { convertToDisplay } from "@/lib/tax-calculator";
-import type { PaymentStatus, Platform, Transaction } from "@/types/finance";
+import {
+  PAYMENT_STATUSES,
+  getTransactionStartDate,
+  type PaymentStatus,
+  type Platform,
+  type Transaction,
+} from "@/types/finance";
 import type { TransactionView } from "@/lib/aggregates";
 
 const PLATFORM_VARIANT: Record<Platform, "default" | "secondary" | "outline" | "ghost"> = {
@@ -98,7 +118,15 @@ function TaxDetails({ row }: { row: TransactionView }) {
 }
 
 export function LedgerTable({ onEdit }: LedgerTableProps) {
-  const { filteredViews, displayCurrency, rates, deleteTransaction, hydrated } = useFinance();
+  const {
+    filteredViews,
+    displayCurrency,
+    rates,
+    deleteTransaction,
+    updateTransaction,
+    hydrated,
+  } = useFinance();
+  const [pendingDelete, setPendingDelete] = useState<Transaction | null>(null);
 
   if (!hydrated) {
     return <p className="text-sm text-muted-foreground">Завантаження журналу…</p>;
@@ -113,7 +141,8 @@ export function LedgerTable({ onEdit }: LedgerTableProps) {
   }
 
   return (
-    <Table>
+    <>
+    <Table className="min-w-[920px]">
       <TableHeader>
         <TableRow>
           <TableHead>Дата / Тиждень</TableHead>
@@ -132,8 +161,16 @@ export function LedgerTable({ onEdit }: LedgerTableProps) {
         {filteredViews.map((row) => (
           <TableRow key={row.id}>
             <TableCell>
-              <div className="font-medium">{formatDate(row.date)}</div>
+              <div className="font-medium">
+                {formatDate(getTransactionStartDate(row))}
+                {row.endDate ? ` — ${formatDate(row.endDate)}` : ""}
+              </div>
               <div className="text-xs text-muted-foreground">Т{row.weekNumber}</div>
+              {row.payoutDate ? (
+                <div className="text-xs text-muted-foreground">
+                  Виплата: {formatDate(row.payoutDate)}
+                </div>
+              ) : null}
             </TableCell>
             <TableCell>
               <div className="font-medium">{row.title}</div>
@@ -169,12 +206,23 @@ export function LedgerTable({ onEdit }: LedgerTableProps) {
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
                   <DropdownMenuItem onClick={() => onEdit(row)}>Редагувати</DropdownMenuItem>
+                  <DropdownMenuSub>
+                    <DropdownMenuSubTrigger>Змінити статус</DropdownMenuSubTrigger>
+                    <DropdownMenuSubContent>
+                      {PAYMENT_STATUSES.map((status) => (
+                        <DropdownMenuItem
+                          key={status}
+                          disabled={row.status === status}
+                          onClick={() => updateTransaction(row.id, { status })}
+                        >
+                          {STATUS_LABELS[status]}
+                        </DropdownMenuItem>
+                      ))}
+                    </DropdownMenuSubContent>
+                  </DropdownMenuSub>
                   <DropdownMenuItem
                     variant="destructive"
-                    onClick={() => {
-                      const confirmed = window.confirm(`Видалити «${row.title}»?`);
-                      if (confirmed) deleteTransaction(row.id);
-                    }}
+                    onClick={() => setPendingDelete(row)}
                   >
                     Видалити
                   </DropdownMenuItem>
@@ -185,5 +233,33 @@ export function LedgerTable({ onEdit }: LedgerTableProps) {
         ))}
       </TableBody>
     </Table>
+      <AlertDialog
+        open={Boolean(pendingDelete)}
+        onOpenChange={(open) => {
+          if (!open) setPendingDelete(null);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Видалити проєкт?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Проєкт «{pendingDelete?.title}» буде видалено без можливості відновлення.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Скасувати</AlertDialogCancel>
+            <AlertDialogAction
+              variant="destructive"
+              onClick={() => {
+                if (pendingDelete) deleteTransaction(pendingDelete.id);
+                setPendingDelete(null);
+              }}
+            >
+              Видалити
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 }

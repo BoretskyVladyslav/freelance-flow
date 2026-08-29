@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   BACKUP_SCHEMA_VERSION,
+  getTransactionStartDate,
   parseBackup,
   type BackupEnvelope,
   type Transaction,
@@ -21,6 +22,35 @@ const validTransaction: Transaction = {
 };
 
 describe("parseBackup", () => {
+  it("keeps legacy date-only records valid and uses date as start fallback", () => {
+    const parsed = parseBackup({
+      version: 1,
+      exportedAt: "2026-08-29T10:00:00.000Z",
+      transactions: [validTransaction],
+    });
+
+    expect(parsed.transactions[0]).not.toHaveProperty("startDate");
+    expect(getTransactionStartDate(parsed.transactions[0])).toBe("2026-08-29");
+  });
+
+  it("accepts optional project lifecycle dates", () => {
+    const transaction = {
+      ...validTransaction,
+      startDate: "2026-08-20",
+      endDate: "2026-08-28",
+      payoutDate: "2026-08-29",
+    };
+
+    const parsed = parseBackup({
+      version: 1,
+      exportedAt: "2026-08-29T10:00:00.000Z",
+      transactions: [transaction],
+    });
+
+    expect(getTransactionStartDate(parsed.transactions[0])).toBe("2026-08-20");
+    expect(parsed.transactions[0].payoutDate).toBe("2026-08-29");
+  });
+
   it("accepts a versioned envelope with valid transactions", () => {
     const backup: BackupEnvelope = {
       version: BACKUP_SCHEMA_VERSION,
@@ -63,6 +93,16 @@ describe("parseBackup", () => {
         version: 1,
         exportedAt: "2026-08-29T10:00:00.000Z",
         transactions: [{ ...validTransaction, weekNumber: 54 }],
+      }),
+    ).toThrow(/index 0/);
+  });
+
+  it("rejects malformed optional lifecycle dates", () => {
+    expect(() =>
+      parseBackup({
+        version: 1,
+        exportedAt: "2026-08-29T10:00:00.000Z",
+        transactions: [{ ...validTransaction, startDate: "not-a-date" }],
       }),
     ).toThrow(/index 0/);
   });

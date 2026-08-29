@@ -1,7 +1,6 @@
 import { del, get, set } from "idb-keyval";
 import {
   BACKUP_SCHEMA_VERSION,
-  BASE_CURRENCY,
   isCurrency,
   isExchangeRates,
   isTransaction,
@@ -28,7 +27,7 @@ export type FinanceSnapshot = {
 const EMPTY_SNAPSHOT: FinanceSnapshot = {
   transactions: [],
   lastKnownRates: null,
-  displayCurrency: BASE_CURRENCY,
+  displayCurrency: "UAH",
 };
 
 let preferLocalStorage = false;
@@ -103,7 +102,10 @@ export async function loadSnapshot(): Promise<FinanceSnapshot> {
       readValue<number>(KEYS.schemaVersion),
     ]);
 
-  if (schemaVersion === undefined) {
+  const needsUahDefaultMigration =
+    schemaVersion === undefined || schemaVersion < BACKUP_SCHEMA_VERSION;
+
+  if (needsUahDefaultMigration) {
     await writeValue(KEYS.schemaVersion, BACKUP_SCHEMA_VERSION);
   }
 
@@ -112,7 +114,11 @@ export async function loadSnapshot(): Promise<FinanceSnapshot> {
       ? transactions.filter(isTransaction)
       : [],
     lastKnownRates: isExchangeRates(lastKnownRates) ? lastKnownRates : null,
-    displayCurrency: isCurrency(displayCurrency) ? displayCurrency : BASE_CURRENCY,
+    displayCurrency: needsUahDefaultMigration
+      ? "UAH"
+      : isCurrency(displayCurrency) && displayCurrency === "EUR"
+        ? "EUR"
+        : "UAH",
   };
 }
 
@@ -146,7 +152,7 @@ export function parseImportedBackup(raw: string): FinanceSnapshot {
   return {
     transactions: parsed.transactions,
     lastKnownRates: parsed.lastKnownRates ?? null,
-    displayCurrency: parsed.displayCurrency ?? BASE_CURRENCY,
+    displayCurrency: parsed.displayCurrency === "EUR" ? "EUR" : "UAH",
   };
 }
 

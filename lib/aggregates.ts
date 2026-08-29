@@ -5,13 +5,23 @@ import {
   convertToDisplay,
   moneyNumber,
 } from "@/lib/tax-calculator";
-import type {
-  Currency,
-  ExchangeRates,
-  LedgerFilters,
-  TaxBreakdown,
-  Transaction,
+import {
+  getTransactionStartDate,
+  type Currency,
+  type ExchangeRates,
+  type LedgerFilters,
+  type TaxBreakdown,
+  type Transaction,
 } from "@/types/finance";
+
+export type ChartPeriod = "3d" | "week" | "month";
+
+export type ChartPoint = {
+  key: string;
+  label: string;
+  gross: number;
+  net: number;
+};
 
 export type TransactionView = Transaction & {
   breakdown: TaxBreakdown;
@@ -54,10 +64,11 @@ export function applyFilters(
     if (filters.status !== "all" && transaction.status !== filters.status) {
       return false;
     }
-    if (filters.month !== "all" && monthKeyFromIsoDate(transaction.date) !== filters.month) {
+    const startDate = getTransactionStartDate(transaction);
+    if (filters.month !== "all" && monthKeyFromIsoDate(startDate) !== filters.month) {
       return false;
     }
-    if (filters.week !== "all" && weekKeyFromIsoDate(transaction.date) !== filters.week) {
+    if (filters.week !== "all" && weekKeyFromIsoDate(startDate) !== filters.week) {
       return false;
     }
     return true;
@@ -122,7 +133,7 @@ export function weeklySeries(
   const grouped = new Map<string, { gross: Decimal; net: Decimal }>();
 
   for (const transaction of transactions) {
-    const weekKey = weekKeyFromIsoDate(transaction.date);
+    const weekKey = weekKeyFromIsoDate(getTransactionStartDate(transaction));
     const current = grouped.get(weekKey) ?? { gross: new Decimal(0), net: new Decimal(0) };
     grouped.set(weekKey, {
       gross: current.gross.plus(transaction.breakdown.grossInBase),
@@ -135,6 +146,80 @@ export function weeklySeries(
     .map(([weekKey, values]) => ({
       weekKey,
       label: weekKey.replace("-W", " Т"),
+      gross: convertToDisplay(moneyNumber(values.gross), displayCurrency, rates),
+      net: convertToDisplay(moneyNumber(values.net), displayCurrency, rates),
+    }));
+}
+
+function localDateKey(date: Date): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function periodKey(transaction: TransactionView, period: ChartPeriod): string {
+  const date = getTransactionStartDate(transaction);
+  if (period === "3d") return date.slice(0, 10);
+  if (period === "month") return monthKeyFromIsoDate(date);
+  return weekKeyFromIsoDate(date);
+}
+
+function periodLabel(key: string, period: ChartPeriod): string {
+  if (period === "3d") {
+    return new Intl.DateTimeFormat("uk-UA", {
+      day: "2-digit",
+      month: "short",
+    }).format(new Date(`${key}T12:00:00`));
+  }
+  if (period === "month") {
+    return new Intl.DateTimeFormat("uk-UA", {
+      month: "short",
+      year: "numeric",
+    }).format(new Date(`${key}-01T12:00:00`));
+  }
+  return key.replace("-W", " Т");
+}
+
+export function chartSeries(
+  transactions: TransactionView[],
+  displayCurrency: Currency,
+  rates: ExchangeRates | null,
+  period: ChartPeriod,
+  now = new Date(),
+): ChartPoint[] {
+  const grouped = new Map<string, { gross: Decimal; net: Decimal }>();
+  const allowedDays =
+    period === "3d"
+      ? Array.from({ length: 3 }, (_, index) => {
+          const date = new Date(now);
+          date.setHours(12, 0, 0, 0);
+          date.setDate(date.getDate() - (2 - index));
+          return localDateKey(date);
+        })
+      : null;
+
+  if (allowedDays) {
+    for (const key of allowedDays) {
+      grouped.set(key, { gross: new Decimal(0), net: new Decimal(0) });
+    }
+  }
+
+  for (const transaction of transactions) {
+    const key = periodKey(transaction, period);
+    if (allowedDays && !allowedDays.includes(key)) continue;
+    const current = grouped.get(key) ?? { gross: new Decimal(0), net: new Decimal(0) };
+    grouped.set(key, {
+      gross: current.gross.plus(transaction.breakdown.grossInBase),
+      net: current.net.plus(transaction.breakdown.netPayout),
+    });
+  }
+
+  return Array.from(grouped.entries())
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([key, values]) => ({
+      key,
+      label: periodLabel(key, period),
       gross: convertToDisplay(moneyNumber(values.gross), displayCurrency, rates),
       net: convertToDisplay(moneyNumber(values.net), displayCurrency, rates),
     }));

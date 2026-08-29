@@ -10,6 +10,8 @@ alwaysApply: true
 - Do **not** round FX rates to 2 decimals. Store `toEur` / `exchangeRateAtCreation` at up to 8 decimal places; EUR is always `1`.
 - Historical payouts lock `exchangeRateAtCreation`. Live gain/loss reruns the same sequence with the current `toEur` rate.
 - Display currency converts EUR totals only. Never change stored original amounts or recalculate tax in the display currency.
+- Browser storage keys and existing records are immutable migration inputs. Never clear or reset IndexedDB/LocalStorage during schema changes.
+- New transaction fields must remain optional. Resolve project start dates with `transaction.startDate || transaction.date` so legacy records continue to load.
 
 ```ts
 // ❌ BAD — float drift, skipped rounding
@@ -24,4 +26,4 @@ const spainTax = roundMoney(taxableBase.times("0.19"));
 
 Sequence: grossInBase → feeInBase → taxableBase → spainTax (19%) → postSpainBase → companyTax (30%) → netPayout.
 
-Any change to tax, rounding, FX conversion, or backup parsing requires tests in `lib/tax-calculator.test.ts` and `types/finance.test.ts`.
+Any change to tax, rounding, FX conversion, storage compatibility, or backup parsing requires tests in `lib/tax-calculator.test.ts` and `types/finance.test.ts`.

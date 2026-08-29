@@ -8,6 +8,7 @@ import { useFinance } from "@/components/finance/finance-provider";
 import { LedgerFilters } from "@/components/finance/ledger-filters";
 import { LedgerTable } from "@/components/finance/ledger-table";
 import { MetricCards } from "@/components/finance/metric-cards";
+import { PdfReportButton } from "@/components/finance/pdf-report-button";
 import { QuickEntryDialog } from "@/components/finance/quick-entry-dialog";
 import { WeeklyChart } from "@/components/finance/weekly-chart";
 import { Button } from "@/components/ui/button";
@@ -40,7 +41,7 @@ export function Dashboard() {
             фіксацією на дату створення
           </p>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex w-full flex-wrap items-center gap-2 lg:w-auto lg:justify-end">
           <CurrencySwitcher value={displayCurrency} onChange={setDisplayCurrency} />
           <Button
             type="button"
@@ -52,6 +53,7 @@ export function Dashboard() {
             <RefreshCw className={ratesRefreshing ? "animate-spin" : undefined} />
             Оновити курс
           </Button>
+          <PdfReportButton />
           <BackupControls />
           <Button
             type="button"

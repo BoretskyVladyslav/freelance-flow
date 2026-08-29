@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo, useState } from "react";
 import {
   Bar,
   BarChart,
@@ -12,31 +13,59 @@ import {
 } from "recharts";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useFinance } from "@/components/finance/finance-provider";
-import { formatMoney } from "@/lib/format";
+import { Button } from "@/components/ui/button";
+import { chartSeries, type ChartPeriod } from "@/lib/aggregates";
+import { formatCompactMoney, formatMoney } from "@/lib/format";
 
 export function WeeklyChart() {
-  const { weekly, displayCurrency, hydrated } = useFinance();
+  const { views, rates, displayCurrency, hydrated } = useFinance();
+  const [period, setPeriod] = useState<ChartPeriod>("week");
+  const data = useMemo(
+    () => chartSeries(views, displayCurrency, rates, period),
+    [displayCurrency, period, rates, views],
+  );
+  const periodOptions: Array<{ value: ChartPeriod; label: string }> = [
+    { value: "3d", label: "Останні 3 дні" },
+    { value: "week", label: "За тижнями" },
+    { value: "month", label: "За місяцями" },
+  ];
 
   return (
     <Card>
-      <CardHeader>
-        <CardTitle>Динаміка за тижнями</CardTitle>
+      <CardHeader className="gap-3">
+        <div>
+        <CardTitle>Динаміка доходів</CardTitle>
         <CardDescription>
-          Валовий дохід (Gross) проти чистої виплати (Net) за тижнями.
+          Валовий дохід (Gross) проти чистої виплати (Net) у {displayCurrency}.
         </CardDescription>
+        </div>
+        <div className="flex flex-wrap gap-2" role="group" aria-label="Період графіка">
+          {periodOptions.map((option) => (
+            <Button
+              key={option.value}
+              type="button"
+              size="sm"
+              variant={period === option.value ? "default" : "outline"}
+              onClick={() => setPeriod(option.value)}
+            >
+              {option.label}
+            </Button>
+          ))}
+        </div>
       </CardHeader>
       <CardContent>
         <div className="h-72 w-full">
-          {hydrated && weekly.length > 0 ? (
+          {hydrated && data.length > 0 ? (
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={weekly} barGap={4}>
+              <BarChart data={data} barGap={4}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} />
                 <XAxis dataKey="label" tickLine={false} axisLine={false} />
                 <YAxis
                   tickLine={false}
                   axisLine={false}
+                  width={72}
                   tickFormatter={(value: number) =>
-                    new Intl.NumberFormat("uk-UA", { notation: "compact" }).format(value)
+                    formatCompactMoney(value, displayCurrency)
                   }
                 />
                 <Tooltip

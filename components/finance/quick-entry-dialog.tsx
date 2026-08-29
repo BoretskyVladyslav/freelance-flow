@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { CircleHelp } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
@@ -21,10 +22,19 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { useFinance } from "@/components/finance/finance-provider";
 import { resolveRate } from "@/lib/exchange-rates";
 import { formatMoney, formatRate } from "@/lib/format";
-import { PLATFORM_LABELS, STATUS_LABELS } from "@/lib/labels";
+import {
+  PLATFORM_LABELS,
+  STATUS_DESCRIPTIONS,
+  STATUS_LABELS,
+} from "@/lib/labels";
 import { calculateTransaction } from "@/lib/tax-calculator";
 import { isoWeekFromIsoDate, todayIsoDate } from "@/lib/week";
 import {
@@ -43,7 +53,9 @@ type FormState = {
   grossAmount: string;
   currency: Currency;
   customFee: string;
-  date: string;
+  startDate: string;
+  endDate: string;
+  payoutDate: string;
   status: PaymentStatus;
   notes: string;
 };
@@ -52,10 +64,12 @@ const EMPTY_FORM: FormState = {
   title: "",
   platform: "Direct Client",
   grossAmount: "",
-  currency: "EUR",
+  currency: "UAH",
   customFee: "0",
-  date: todayIsoDate(),
-  status: "Paid",
+  startDate: todayIsoDate(),
+  endDate: "",
+  payoutDate: "",
+  status: "In Progress",
   notes: "",
 };
 
@@ -83,13 +97,15 @@ export function QuickEntryDialog({
         grossAmount: String(transaction.grossAmount),
         currency: transaction.currency,
         customFee: String(transaction.customFee),
-        date: transaction.date.slice(0, 10),
+        startDate: (transaction.startDate || transaction.date).slice(0, 10),
+        endDate: transaction.endDate?.slice(0, 10) ?? "",
+        payoutDate: transaction.payoutDate?.slice(0, 10) ?? "",
         status: transaction.status,
         notes: transaction.notes ?? "",
       });
       return;
     }
-    setForm({ ...EMPTY_FORM, date: todayIsoDate() });
+    setForm({ ...EMPTY_FORM, startDate: todayIsoDate() });
   }, [open, transaction]);
 
   const grossAmount = Number(form.grossAmount);
@@ -132,7 +148,13 @@ export function QuickEntryDialog({
       return "Комісія не може бути відʼємною.";
     }
     if (customFee > grossAmount) return "Комісія не може перевищувати суму Gross.";
-    if (!form.date) return "Дата обовʼязкова.";
+    if (!form.startDate) return "Дата початку обовʼязкова.";
+    if (form.endDate && form.endDate < form.startDate) {
+      return "Дата завершення не може бути раніше дати початку.";
+    }
+    if (form.payoutDate && form.payoutDate < form.startDate) {
+      return "Дата виплати не може бути раніше дати початку.";
+    }
     return null;
   }
 
@@ -150,7 +172,10 @@ export function QuickEntryDialog({
       grossAmount,
       currency: form.currency,
       customFee,
-      date: form.date,
+      date: form.startDate,
+      startDate: form.startDate || undefined,
+      endDate: form.endDate || undefined,
+      payoutDate: form.payoutDate || undefined,
       status: form.status,
       notes: form.notes,
       exchangeRateAtCreation: lockedRate,
@@ -159,7 +184,7 @@ export function QuickEntryDialog({
     if (transaction) {
       updateTransaction(transaction.id, {
         ...payload,
-        weekNumber: isoWeekFromIsoDate(form.date),
+        weekNumber: isoWeekFromIsoDate(form.startDate),
       });
       toast.success("Проєкт оновлено.");
     } else {
@@ -171,7 +196,10 @@ export function QuickEntryDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg" showCloseButton>
+      <DialogContent
+        className="max-h-[calc(100dvh-1rem)] overflow-y-auto sm:max-w-2xl"
+        showCloseButton
+      >
         <form onSubmit={onSubmit} className="grid gap-4">
           <DialogHeader>
             <DialogTitle>{editing ? "Редагувати проєкт" : "Швидке додавання"}</DialogTitle>
@@ -226,6 +254,9 @@ export function QuickEntryDialog({
                   ))}
                 </SelectContent>
               </Select>
+              <p className="text-xs text-muted-foreground">
+                {STATUS_DESCRIPTIONS[form.status]}
+              </p>
             </div>
             <div className="grid gap-1.5">
               <Label htmlFor="gross">Сума Gross</Label>
@@ -258,7 +289,26 @@ export function QuickEntryDialog({
               </Select>
             </div>
             <div className="grid gap-1.5">
-              <Label htmlFor="fee">Комісія</Label>
+              <div className="flex items-center gap-1.5">
+                <Label htmlFor="fee">Комісія</Label>
+                <Tooltip>
+                  <TooltipTrigger
+                    render={
+                      <button
+                        type="button"
+                        className="text-muted-foreground hover:text-foreground"
+                        aria-label="Пояснення комісії"
+                      />
+                    }
+                  >
+                    <CircleHelp className="size-3.5" />
+                  </TooltipTrigger>
+                  <TooltipContent className="max-w-72">
+                    Комісія біржі, банку або платіжної системи, що віднімається до
+                    розрахунку податків
+                  </TooltipContent>
+                </Tooltip>
+              </div>
               <Input
                 id="fee"
                 type="number"
@@ -270,12 +320,30 @@ export function QuickEntryDialog({
               />
             </div>
             <div className="grid gap-1.5">
-              <Label htmlFor="date">Дата</Label>
+              <Label htmlFor="startDate">Дата початку</Label>
               <Input
-                id="date"
+                id="startDate"
                 type="date"
-                value={form.date}
-                onChange={(event) => setField("date", event.target.value)}
+                value={form.startDate}
+                onChange={(event) => setField("startDate", event.target.value)}
+              />
+            </div>
+            <div className="grid gap-1.5">
+              <Label htmlFor="endDate">Дата завершення</Label>
+              <Input
+                id="endDate"
+                type="date"
+                value={form.endDate}
+                onChange={(event) => setField("endDate", event.target.value)}
+              />
+            </div>
+            <div className="grid gap-1.5">
+              <Label htmlFor="payoutDate">Дата виплати</Label>
+              <Input
+                id="payoutDate"
+                type="date"
+                value={form.payoutDate}
+                onChange={(event) => setField("payoutDate", event.target.value)}
               />
             </div>
             <div className="grid gap-1.5 sm:col-span-2">
@@ -291,7 +359,7 @@ export function QuickEntryDialog({
 
           <p className="text-xs text-muted-foreground">
             Зафіксований курс EUR: {formatRate(lockedRate)} · ISO-тиждень{" "}
-            {form.date ? isoWeekFromIsoDate(form.date) : "—"}
+            {form.startDate ? isoWeekFromIsoDate(form.startDate) : "—"}
           </p>
 
           {preview ? (

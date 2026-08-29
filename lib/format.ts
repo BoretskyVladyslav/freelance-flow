@@ -36,6 +36,16 @@ export function formatRate(rate: number): string {
   }).format(rate);
 }
 
+export function formatCompactMoney(amount: number, currency: Currency): string {
+  return new Intl.NumberFormat("uk-UA", {
+    style: "currency",
+    currency,
+    currencyDisplay: "narrowSymbol",
+    notation: "compact",
+    maximumFractionDigits: 1,
+  }).format(amount);
+}
+
 export function formatDate(isoDate: string): string {
   const date = new Date(isoDate);
   if (Number.isNaN(date.getTime())) return isoDate;
