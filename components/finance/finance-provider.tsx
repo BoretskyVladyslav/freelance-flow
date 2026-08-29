@@ -19,7 +19,7 @@ import {
 } from "@/lib/aggregates";
 import { resolveRate } from "@/lib/exchange-rates";
 import {
-  browserProjectsRepository,
+  projectsRepository,
   type FinanceSnapshot,
 } from "@/services/projects";
 import { buildFinancialOverview } from "@/services/financials";
@@ -71,6 +71,7 @@ function createId(): string {
 
 export function FinanceProvider({ children }: { children: ReactNode }) {
   const [hydrated, setHydrated] = useState(false);
+  const [persistEnabled, setPersistEnabled] = useState(false);
   const [snapshot, setSnapshot] = useState<FinanceSnapshot>({
     transactions: [],
     lastKnownRates: null,
@@ -80,16 +81,25 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
   const exchange = useExchangeRates(snapshot.lastKnownRates);
 
   useEffect(() => {
-    void browserProjectsRepository.load().then((loaded) => {
-      setSnapshot(loaded);
-      setHydrated(true);
-    });
+    void projectsRepository
+      .load()
+      .then((loaded) => {
+        setSnapshot(loaded);
+        setPersistEnabled(true);
+        setHydrated(true);
+      })
+      .catch((error) => {
+        setHydrated(true);
+        toast.error(error instanceof Error ? error.message : "Не вдалося завантажити проєкти.");
+      });
   }, []);
 
   useEffect(() => {
-    if (!hydrated) return;
-    void browserProjectsRepository.save(snapshot);
-  }, [hydrated, snapshot]);
+    if (!hydrated || !persistEnabled) return;
+    void projectsRepository.save(snapshot).catch((error) => {
+      toast.error(error instanceof Error ? error.message : "Не вдалося зберегти проєкти.");
+    });
+  }, [hydrated, persistEnabled, snapshot]);
 
   useEffect(() => {
     if (!hydrated || exchange.rates.stale) return;
@@ -169,7 +179,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const exportBackup = useCallback(() => {
-    const payload = browserProjectsRepository.serializeBackup(snapshot);
+    const payload = projectsRepository.serializeBackup(snapshot);
     const blob = new Blob([payload], { type: "application/json" });
     const url = URL.createObjectURL(blob);
     const anchor = document.createElement("a");
@@ -185,7 +195,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
   }, [snapshot]);
 
   const importBackup = useCallback((raw: string) => {
-    const imported = browserProjectsRepository.parseBackup(raw);
+    const imported = projectsRepository.parseBackup(raw);
     setSnapshot(imported);
     toast.success(`Імпортовано транзакцій: ${imported.transactions.length}.`);
   }, []);

@@ -5,6 +5,8 @@ import {
   serializeBackup,
   type FinanceSnapshot,
 } from "@/lib/storage";
+import { isSupabaseConfigured } from "@/lib/supabase/env";
+import { supabaseProjectsRepository } from "@/services/supabase-projects";
 
 export type { FinanceSnapshot } from "@/lib/storage";
 
@@ -22,3 +24,6 @@ export const browserProjectsRepository: ProjectsRepository = {
   parseBackup: parseImportedBackup,
 };
 
+export const projectsRepository: ProjectsRepository = isSupabaseConfigured()
+  ? supabaseProjectsRepository
+  : browserProjectsRepository;

@@ -184,6 +184,18 @@ export async function loadSnapshot(): Promise<FinanceSnapshot> {
   return snapshot;
 }
 
+export async function savePreferences(prefs: {
+  lastKnownRates: ExchangeRates | null;
+  displayCurrency: Currency;
+}): Promise<void> {
+  await Promise.all([
+    prefs.lastKnownRates
+      ? writeValue(KEYS.rates, prefs.lastKnownRates)
+      : writeValue(KEYS.rates, null),
+    writeValue(KEYS.displayCurrency, prefs.displayCurrency),
+  ]);
+}
+
 export async function saveSnapshot(snapshot: FinanceSnapshot): Promise<void> {
   const existingTransactions = await readTransactions();
   const transactions = resolveTransactionsToPersist(
