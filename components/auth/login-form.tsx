@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -13,22 +13,8 @@ export function LoginForm() {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [fullName, setFullName] = useState("");
   const [submitting, setSubmitting] = useState(false);
-  const [setupAvailable, setSetupAvailable] = useState(false);
   const configured = isSupabaseConfigured();
-
-  useEffect(() => {
-    if (process.env.NODE_ENV !== "development" || !configured) return;
-    void fetch("/api/setup-admin")
-      .then((response) => response.json())
-      .then((payload: { available?: boolean; hasAdmin?: boolean }) => {
-        setSetupAvailable(Boolean(payload.available && !payload.hasAdmin));
-      })
-      .catch(() => {
-        setSetupAvailable(false);
-      });
-  }, [configured]);
 
   async function onSubmit(event: React.FormEvent) {
     event.preventDefault();
@@ -39,40 +25,37 @@ export function LoginForm() {
     setSubmitting(true);
     try {
       const supabase = createBrowserSupabaseClient();
-      const { error } = await supabase.auth.signInWithPassword({ email, password });
-      if (error) {
-        toast.error(error.message);
+      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error || !data.user) {
+        toast.error(error?.message ?? "Невірний email або пароль.");
         return;
       }
-      router.replace("/");
-      router.refresh();
-    } finally {
-      setSubmitting(false);
-    }
-  }
 
-  async function onCreateAdmin() {
-    if (!configured) return;
-    setSubmitting(true);
-    try {
-      const response = await fetch("/api/setup-admin", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password, fullName }),
-      });
-      const payload = (await response.json()) as {
-        error?: string;
-        needsEmailConfirmation?: boolean;
-      };
-      if (!response.ok) {
-        toast.error(payload.error ?? "Не вдалося створити адміна.");
+      const withStatus = await supabase
+        .from("profiles")
+        .select("id, status")
+        .eq("id", data.user.id)
+        .maybeSingle();
+
+      const profile =
+        withStatus.error && /status/i.test(withStatus.error.message)
+          ? await supabase.from("profiles").select("id").eq("id", data.user.id).maybeSingle()
+          : withStatus;
+
+      if (profile.error) {
+        await supabase.auth.signOut();
+        toast.error(profile.error.message);
         return;
       }
-      if (payload.needsEmailConfirmation) {
-        toast.success("Адміна створено. Підтвердіть email, потім увійдіть.");
+
+      const status =
+        profile.data && "status" in profile.data ? profile.data.status : "active";
+      if (!profile.data || status === "disabled") {
+        await supabase.auth.signOut();
+        toast.error("Доступ закрито. Зверніться до адміністратора.");
         return;
       }
-      toast.success("Адміна створено.");
+
       router.replace("/");
       router.refresh();
     } finally {
@@ -91,17 +74,6 @@ export function LoginForm() {
 
   return (
     <form onSubmit={onSubmit} className="grid gap-4">
-      {setupAvailable ? (
-        <div className="grid gap-1.5">
-          <Label htmlFor="fullName">Повне імʼя</Label>
-          <Input
-            id="fullName"
-            value={fullName}
-            onChange={(event) => setFullName(event.target.value)}
-            placeholder="Владислав"
-          />
-        </div>
-      ) : null}
       <div className="grid gap-1.5">
         <Label htmlFor="email">Email</Label>
         <Input
@@ -119,9 +91,8 @@ export function LoginForm() {
         <Input
           id="password"
           type="password"
-          autoComplete={setupAvailable ? "new-password" : "current-password"}
+          autoComplete="current-password"
           required
-          minLength={8}
           value={password}
           onChange={(event) => setPassword(event.target.value)}
         />
@@ -129,17 +100,6 @@ export function LoginForm() {
       <Button type="submit" disabled={submitting} className="w-full">
         Увійти
       </Button>
-      {setupAvailable ? (
-        <Button
-          type="button"
-          variant="outline"
-          disabled={submitting}
-          className="w-full"
-          onClick={() => void onCreateAdmin()}
-        >
-          Створити першого адміна (dev)
-        </Button>
-      ) : null}
     </form>
   );
 }

@@ -17,7 +17,7 @@ export default function LoginPage() {
           </p>
           <CardTitle className="text-2xl">Увійти в Freelance Flow</CardTitle>
           <CardDescription>
-            Email і пароль. Перший адмін створюється лише в development.
+            Доступ лише за запрошенням адміністратора. Email і пароль.
           </CardDescription>
         </CardHeader>
         <CardContent>

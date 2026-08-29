@@ -7,6 +7,7 @@ import {
   PLATFORM_LABELS,
   STATUS_FILTER_ITEMS,
   STATUS_LABELS,
+  TEAM_SCOPE_ITEMS,
 } from "@/lib/labels";
 import { monthKeyFromIsoDate, weekKeyFromIsoDate } from "@/lib/week";
 import {
@@ -23,7 +24,7 @@ import {
 } from "@/components/ui/select";
 
 export function LedgerFilters() {
-  const { filters, setFilters, transactions } = useFinance();
+  const { filters, setFilters, transactions, isAdmin, teamScope, setTeamScope } = useFinance();
 
   const months = useMemo(() => {
     return Array.from(
@@ -55,6 +56,29 @@ export function LedgerFilters() {
 
   return (
     <div className="flex flex-wrap items-center gap-2 print:hidden">
+      {isAdmin ? (
+        <Select
+          value={teamScope}
+          items={TEAM_SCOPE_ITEMS}
+          onValueChange={(value) => {
+            if (value === "all" || value === "personal") setTeamScope(value);
+          }}
+        >
+          <SelectTrigger aria-label="Охоплення команди" className="min-w-44">
+            <SelectValue>
+              {(value: string | null) =>
+                value && value in TEAM_SCOPE_ITEMS
+                  ? TEAM_SCOPE_ITEMS[value as keyof typeof TEAM_SCOPE_ITEMS]
+                  : TEAM_SCOPE_ITEMS.all
+              }
+            </SelectValue>
+          </SelectTrigger>
+          <SelectContent alignItemWithTrigger={false}>
+            <SelectItem value="all">Усі працівники</SelectItem>
+            <SelectItem value="personal">Персонально</SelectItem>
+          </SelectContent>
+        </Select>
+      ) : null}
       <Select
         value={filters.platform}
         items={PLATFORM_FILTER_ITEMS}

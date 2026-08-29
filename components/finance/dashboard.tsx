@@ -13,6 +13,8 @@ import { MetricCards } from "@/components/finance/metric-cards";
 import { PdfReportButton } from "@/components/finance/pdf-report-button";
 import { QuickEntryDialog } from "@/components/finance/quick-entry-dialog";
 import { WeeklyChart } from "@/components/finance/weekly-chart";
+import { TeamPanel } from "@/components/team/team-panel";
+import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { uahPerUnit } from "@/lib/exchange-rates";
@@ -27,6 +29,7 @@ export function Dashboard() {
     ratesError,
     ratesRefreshing,
     refreshRates,
+    isAdmin,
   } = useFinance();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedProject, setSelectedProject] = useState<Transaction | null>(null);
@@ -40,8 +43,9 @@ export function Dashboard() {
           </p>
           <h1 className="text-2xl font-semibold tracking-tight">Freelance Flow</h1>
           <p className="text-sm text-muted-foreground print:hidden">
-            Базова валюта: EUR · Податок в Іспанії 19%, податок компанії 30% · Курс валют онлайн із
-            фіксацією на дату створення
+            {isAdmin
+              ? "Базова валюта: EUR · Податок в Іспанії 19%, податок компанії 30% · Курс валют онлайн із фіксацією на дату створення"
+              : "Ваші проєкти, чисті виплати та персональні показники · Базова валюта EUR"}
           </p>
           <p className="hidden text-sm text-muted-foreground print:block">
             Фінансовий звіт · {formatDate(new Date().toISOString())} · Валюта звіту:{" "}
@@ -102,6 +106,8 @@ export function Dashboard() {
           />
         </CardContent>
       </Card>
+
+      {isAdmin && isSupabaseConfigured() ? <TeamPanel /> : null}
 
       <QuickEntryDialog
         open={isModalOpen}

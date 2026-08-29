@@ -1,3 +1,5 @@
+import type { UserRole } from "@/types/database";
+import type { ProfileStatus } from "@/types/team";
 import type { PaymentStatus, Platform } from "@/types/finance";
 
 export const PLATFORM_LABELS: Record<Platform, string> = {
@@ -27,4 +29,19 @@ export const PLATFORM_FILTER_ITEMS = {
 export const STATUS_FILTER_ITEMS = {
   all: "Всі статуси",
   ...STATUS_LABELS,
+} as const;
+
+export const ROLE_LABELS: Record<UserRole, string> = {
+  admin: "Адмін",
+  employee: "Працівник",
+};
+
+export const STATUS_ACCOUNT_LABELS: Record<ProfileStatus, string> = {
+  active: "Активний",
+  disabled: "Вимкнено",
+};
+
+export const TEAM_SCOPE_ITEMS = {
+  all: "Усі працівники",
+  personal: "Персонально",
 } as const;

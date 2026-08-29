@@ -14,7 +14,7 @@ import { formatMoney, formatSignedMoney } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
 export function MetricCards() {
-  const { displayTotals, displayCurrency, hydrated } = useFinance();
+  const { displayTotals, displayCurrency, hydrated, isAdmin, teamScope } = useFinance();
   const gain = displayTotals.currencyGainLoss;
   const gainPositive = gain > 0;
   const gainNegative = gain < 0;
@@ -39,14 +39,18 @@ export function MetricCards() {
       key: "spain",
       title: "Податок в Іспанії (19%)",
       value: formatMoney(displayTotals.spainTax, displayCurrency),
-      description: "Нараховується на базу після вирахування комісій.",
+      description: isAdmin && teamScope === "all"
+        ? "Агрегація по компанії. Нараховується на базу після вирахування комісій."
+        : "Нараховується на базу після вирахування комісій.",
       icon: Landmark,
     },
     {
       key: "company",
       title: "Податок фірми (30%)",
       value: formatMoney(displayTotals.companyTax, displayCurrency),
-      description: "Нараховується на залишок після сплати іспанського податку.",
+      description: isAdmin && teamScope === "all"
+        ? "Агрегація по компанії. Нараховується на залишок після сплати іспанського податку."
+        : "Нараховується на залишок після сплати іспанського податку.",
       icon: Building2,
     },
     {

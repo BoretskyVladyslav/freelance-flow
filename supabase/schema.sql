@@ -1,5 +1,8 @@
 -- Freelance Flow — run this in the Supabase SQL Editor (once per project).
 -- Auth roles live in public.profiles.role, never in auth.users raw_user_meta_data.
+-- Closed ecosystem: disable public Email sign-ups in Auth settings.
+-- Provision users only via supabase.auth.admin.createUser (service role /api/team).
+-- First corporate admin: create the user in the Supabase Auth dashboard so this trigger assigns admin.
 
 create extension if not exists "pgcrypto";
 
@@ -16,9 +19,24 @@ create table if not exists public.profiles (
   email text not null,
   role public.user_role not null default 'employee',
   full_name text not null default '',
+  status text not null default 'active',
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
+
+alter table public.profiles
+  add column if not exists status text not null default 'active';
+
+do $$
+begin
+  if not exists (
+    select 1 from pg_constraint where conname = 'profiles_status_check'
+  ) then
+    alter table public.profiles
+      add constraint profiles_status_check check (status in ('active', 'disabled'));
+  end if;
+end
+$$;
 
 create table if not exists public.projects (
   id uuid primary key default gen_random_uuid(),
@@ -69,7 +87,8 @@ create trigger projects_set_updated_at
   before update on public.projects
   for each row execute function public.set_updated_at();
 
--- First signup becomes admin; later signups are employees.
+-- Invitation-only. First auth.users row becomes admin; later rows are employees.
+-- Do not assign role from JWT / raw_user_meta_data.
 create or replace function public.handle_new_user()
 returns trigger
 language plpgsql
@@ -84,12 +103,13 @@ begin
     else 'employee'::public.user_role
   end;
 
-  insert into public.profiles (id, email, full_name, role)
+  insert into public.profiles (id, email, full_name, role, status)
   values (
     new.id,
     coalesce(new.email, ''),
     coalesce(new.raw_user_meta_data->>'full_name', ''),
-    assigned_role
+    assigned_role,
+    'active'
   )
   on conflict (id) do nothing;
 
@@ -114,6 +134,7 @@ as $$
     from public.profiles
     where id = auth.uid()
       and role = 'admin'
+      and coalesce(status, 'active') = 'active'
   );
 $$;
 
@@ -134,8 +155,8 @@ $$;
 revoke all on function public.is_admin() from public, anon;
 grant execute on function public.is_admin() to authenticated;
 
-revoke all on function public.has_admin() from public;
-grant execute on function public.has_admin() to anon, authenticated;
+revoke all on function public.has_admin() from public, anon;
+grant execute on function public.has_admin() to authenticated;
 
 alter table public.profiles enable row level security;
 alter table public.projects enable row level security;
@@ -162,8 +183,9 @@ security definer
 set search_path = public
 as $$
 begin
-  if new.role is distinct from old.role and not public.is_admin() then
+  if auth.uid() is not null and not public.is_admin() then
     new.role := old.role;
+    new.status := old.status;
   end if;
   return new;
 end;

@@ -24,6 +24,8 @@ import {
 } from "@/services/projects";
 import { buildFinancialOverview } from "@/services/financials";
 import { isoWeekFromIsoDate } from "@/lib/week";
+import { isSupabaseConfigured } from "@/lib/supabase/env";
+import { createBrowserSupabaseClient } from "@/lib/supabase/client";
 import {
   DEFAULT_FILTERS,
   type Currency,
@@ -31,9 +33,16 @@ import {
   type LedgerFilters,
   type Transaction,
 } from "@/types/finance";
+import type { UserRole } from "@/types/database";
+import type { TeamScope } from "@/types/team";
 
 type FinanceContextValue = {
   hydrated: boolean;
+  role: UserRole;
+  isAdmin: boolean;
+  currentUserId: string;
+  teamScope: TeamScope;
+  setTeamScope: (scope: TeamScope) => void;
   transactions: Transaction[];
   views: TransactionView[];
   filteredViews: TransactionView[];
@@ -73,6 +82,9 @@ function createId(): string {
 export function FinanceProvider({ children }: { children: ReactNode }) {
   const [hydrated, setHydrated] = useState(false);
   const [persistEnabled, setPersistEnabled] = useState(false);
+  const [role, setRole] = useState<UserRole>("employee");
+  const [currentUserId, setCurrentUserId] = useState("");
+  const [teamScope, setTeamScope] = useState<TeamScope>("all");
   const [snapshot, setSnapshot] = useState<FinanceSnapshot>({
     transactions: [],
     lastKnownRates: null,
@@ -96,6 +108,64 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
+    if (!isSupabaseConfigured()) {
+      setRole("admin");
+      setCurrentUserId("");
+      return;
+    }
+
+    let cancelled = false;
+    void (async () => {
+      try {
+        const supabase = createBrowserSupabaseClient();
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
+        if (cancelled) return;
+        if (!user) {
+          setRole("employee");
+          setCurrentUserId("");
+          return;
+        }
+
+        const withStatus = await supabase
+          .from("profiles")
+          .select("id, role, status")
+          .eq("id", user.id)
+          .maybeSingle();
+        const profile =
+          withStatus.error && /status/i.test(withStatus.error.message)
+            ? await supabase.from("profiles").select("id, role").eq("id", user.id).maybeSingle()
+            : withStatus;
+        if (cancelled) return;
+
+        const status =
+          profile.data && "status" in profile.data ? profile.data.status : "active";
+        if (profile.error || !profile.data || status === "disabled") {
+          await supabase.auth.signOut();
+          window.location.replace("/login");
+          return;
+        }
+
+        setCurrentUserId(user.id);
+        setRole(profile.data.role);
+        if (profile.data.role !== "admin") {
+          setTeamScope("personal");
+        }
+      } catch {
+        if (!cancelled) {
+          setRole("employee");
+          setCurrentUserId("");
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
     if (!hydrated || !persistEnabled) return;
     void projectsRepository.save(snapshot).catch((error) => {
       toast.error(error instanceof Error ? error.message : "Не вдалося зберегти проєкти.");
@@ -112,14 +182,22 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     });
   }, [exchange.rates, hydrated]);
 
+  const isAdmin = role === "admin";
+  const scopedTransactions = useMemo(() => {
+    if (!isAdmin || teamScope !== "personal" || !currentUserId) {
+      return snapshot.transactions;
+    }
+    return snapshot.transactions.filter((row) => row.employeeId === currentUserId);
+  }, [currentUserId, isAdmin, snapshot.transactions, teamScope]);
+
   const overview = useMemo(
     () =>
       buildFinancialOverview(
-        snapshot.transactions,
+        scopedTransactions,
         exchange.rates,
         snapshot.displayCurrency,
       ),
-    [exchange.rates, snapshot.displayCurrency, snapshot.transactions],
+    [exchange.rates, scopedTransactions, snapshot.displayCurrency],
   );
   const { views, totals, displayTotals, weekly } = overview;
   const filteredViews = useMemo(() => applyFilters(views, filters), [views, filters]);
@@ -139,13 +217,15 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
         exchangeRateAtCreation,
         title: input.title.trim(),
         notes: input.notes?.trim() ? input.notes.trim() : undefined,
+        employeeId: input.employeeId ?? (currentUserId || undefined),
+        createdBy: input.createdBy ?? (currentUserId || undefined),
       };
       setSnapshot((current) => ({
         ...current,
         transactions: [next, ...current.transactions],
       }));
     },
-    [exchange.rates],
+    [currentUserId, exchange.rates],
   );
 
   const updateTransaction = useCallback((id: string, patch: Partial<Omit<Transaction, "id">>) => {
@@ -211,7 +291,12 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
   const value = useMemo<FinanceContextValue>(
     () => ({
       hydrated,
-      transactions: snapshot.transactions,
+      role,
+      isAdmin,
+      currentUserId,
+      teamScope,
+      setTeamScope,
+      transactions: scopedTransactions,
       views,
       filteredViews,
       filters,
@@ -235,6 +320,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     }),
     [
       addTransaction,
+      currentUserId,
       deleteTransaction,
       displayTotals,
       exchange.error,
@@ -247,10 +333,13 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
       filters,
       hydrated,
       importBackup,
+      isAdmin,
       reloadProjects,
+      role,
+      scopedTransactions,
       setDisplayCurrency,
       snapshot.displayCurrency,
-      snapshot.transactions,
+      teamScope,
       totals,
       updateTransaction,
       views,

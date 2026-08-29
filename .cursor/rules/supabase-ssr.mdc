@@ -9,6 +9,7 @@ alwaysApply: false
 - Browser, Server Components, and middleware each use their own client in `lib/supabase/`. Never share one client across runtimes.
 - Protect pages with `getUser()` / `getClaims()`. Never authorize from `getSession()` or `user_metadata`.
 - Role lives in `public.profiles.role`, not JWT user metadata. RLS uses `public.is_admin()`.
+- Closed ecosystem: no public sign-up UI or `signUp` routes. Provision users only via `supabase.auth.admin.createUser` on the server (`/api/team`) with `SUPABASE_SERVICE_ROLE_KEY`.
 - `NEXT_PUBLIC_SUPABASE_URL` + `NEXT_PUBLIC_SUPABASE_ANON_KEY` gate the backend. If missing, keep the IndexedDB repository. Never put `service_role` in `NEXT_PUBLIC_*`.
 - UI talks to `services/projects.ts` only. The Supabase adapter must implement `ProjectsRepository`.
 
