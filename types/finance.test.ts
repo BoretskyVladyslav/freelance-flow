@@ -67,6 +67,30 @@ describe("parseBackup", () => {
     expect(parsed.transactions[0].clientName).toBe("Acme Studio");
   });
 
+  it("accepts optional employee identity without changing legacy records", () => {
+    const parsedLegacy = parseBackup({
+      version: 1,
+      exportedAt: "2026-08-29T10:00:00.000Z",
+      transactions: [validTransaction],
+    });
+    expect(parsedLegacy.transactions[0]).not.toHaveProperty("employeeId");
+    expect(parsedLegacy.transactions[0]).not.toHaveProperty("createdBy");
+
+    const parsed = parseBackup({
+      version: BACKUP_SCHEMA_VERSION,
+      exportedAt: "2026-08-29T10:00:00.000Z",
+      transactions: [
+        {
+          ...validTransaction,
+          employeeId: "emp_7",
+          createdBy: "user_1",
+        },
+      ],
+    });
+    expect(parsed.transactions[0].employeeId).toBe("emp_7");
+    expect(parsed.transactions[0].createdBy).toBe("user_1");
+  });
+
   it("accepts a versioned envelope with valid transactions", () => {
     const backup: BackupEnvelope = {
       version: BACKUP_SCHEMA_VERSION,

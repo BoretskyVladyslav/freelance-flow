@@ -91,6 +91,35 @@ async function writeValue(key: string, value: unknown): Promise<void> {
   }
 }
 
+export type RawFinanceSnapshot = {
+  transactions?: unknown;
+  lastKnownRates?: unknown;
+  displayCurrency?: unknown;
+  schemaVersion?: unknown;
+};
+
+function storedSchemaVersion(value: unknown): number {
+  return typeof value === "number" && Number.isFinite(value) ? value : 0;
+}
+
+export function migrateSnapshot(raw: RawFinanceSnapshot): FinanceSnapshot {
+  const schemaVersion = storedSchemaVersion(raw.schemaVersion);
+  const transactions = Array.isArray(raw.transactions)
+    ? raw.transactions.filter(isTransaction)
+    : [];
+
+  return {
+    transactions,
+    lastKnownRates: isExchangeRates(raw.lastKnownRates) ? raw.lastKnownRates : null,
+    displayCurrency:
+      schemaVersion < 2
+        ? "UAH"
+        : isCurrency(raw.displayCurrency) && raw.displayCurrency === "EUR"
+          ? "EUR"
+          : "UAH",
+  };
+}
+
 export async function loadSnapshot(): Promise<FinanceSnapshot> {
   if (!canUseBrowserStorage()) return EMPTY_SNAPSHOT;
 
@@ -102,24 +131,18 @@ export async function loadSnapshot(): Promise<FinanceSnapshot> {
       readValue<number>(KEYS.schemaVersion),
     ]);
 
-  const needsUahDefaultMigration =
-    schemaVersion === undefined || schemaVersion < BACKUP_SCHEMA_VERSION;
+  const snapshot = migrateSnapshot({
+    transactions,
+    lastKnownRates,
+    displayCurrency,
+    schemaVersion,
+  });
 
-  if (needsUahDefaultMigration) {
+  if (storedSchemaVersion(schemaVersion) < BACKUP_SCHEMA_VERSION) {
     await writeValue(KEYS.schemaVersion, BACKUP_SCHEMA_VERSION);
   }
 
-  return {
-    transactions: Array.isArray(transactions)
-      ? transactions.filter(isTransaction)
-      : [],
-    lastKnownRates: isExchangeRates(lastKnownRates) ? lastKnownRates : null,
-    displayCurrency: needsUahDefaultMigration
-      ? "UAH"
-      : isCurrency(displayCurrency) && displayCurrency === "EUR"
-        ? "EUR"
-        : "UAH",
-  };
+  return snapshot;
 }
 
 export async function saveSnapshot(snapshot: FinanceSnapshot): Promise<void> {

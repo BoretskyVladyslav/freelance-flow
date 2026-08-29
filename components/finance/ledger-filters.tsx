@@ -33,7 +33,7 @@ export function LedgerFilters() {
   }, [transactions]);
 
   return (
-    <div className="flex flex-wrap items-center gap-2">
+    <div className="flex flex-wrap items-center gap-2 print:hidden">
       <Select
         value={filters.platform}
         onValueChange={(value) =>

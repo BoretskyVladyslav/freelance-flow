@@ -1,0 +1,24 @@
+---
+description: Never wipe IndexedDB or LocalStorage on schema version bumps
+alwaysApply: true
+---
+
+# Persistence safety
+
+- Schema version bumps are additive. Never `clear`, `del`, or reset IndexedDB/LocalStorage during a migration.
+- `clearAllData` is user-initiated only (backup UI). Migrations must not call it.
+- If stored `transactions` is an array, never persist `[]` over it. Keep rows that pass `isTransaction`.
+- Write the new `schemaVersion` without rewriting the transactions key unless a real transform ran.
+- New entity fields stay optional so `isTransaction` does not drop legacy rows.
+
+```ts
+// ❌ BAD — version bump empties the ledger
+if (schemaVersion < CURRENT) {
+  await del(KEYS.transactions);
+  await set(KEYS.schemaVersion, CURRENT);
+}
+
+// ✅ GOOD — bump version, keep the array
+const transactions = Array.isArray(raw) ? raw.filter(isTransaction) : [];
+await set(KEYS.schemaVersion, CURRENT);
+```

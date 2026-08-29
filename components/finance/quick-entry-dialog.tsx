@@ -222,9 +222,11 @@ export function QuickEntryDialog({
             </DialogDescription>
           </DialogHeader>
 
-          <div className="grid grid-cols-1 items-start gap-4 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div className="grid gap-1.5 sm:col-span-2">
-              <Label htmlFor="title">Назва проєкту</Label>
+              <div className="flex h-5 items-center">
+                <Label htmlFor="title">Назва проєкту</Label>
+              </div>
               <Input
                 id="title"
                 autoFocus
@@ -234,7 +236,9 @@ export function QuickEntryDialog({
               />
             </div>
             <div className="grid gap-1.5">
-              <Label htmlFor="platform">Платформа</Label>
+              <div className="flex h-5 items-center">
+                <Label htmlFor="platform">Платформа</Label>
+              </div>
               <Select
                 value={form.platform}
                 onValueChange={(value) => value && setField("platform", value as Platform)}
@@ -252,7 +256,9 @@ export function QuickEntryDialog({
               </Select>
             </div>
             <div className="grid gap-1.5">
-              <Label htmlFor="status">Статус</Label>
+              <div className="flex h-5 items-center">
+                <Label htmlFor="status">Статус</Label>
+              </div>
               <Select
                 value={form.status}
                 onValueChange={(value) => value && setField("status", value as PaymentStatus)}
@@ -268,12 +274,11 @@ export function QuickEntryDialog({
                   ))}
                 </SelectContent>
               </Select>
-              <p className="mt-1 text-xs text-muted-foreground">
-                {STATUS_DESCRIPTIONS[form.status]}
-              </p>
             </div>
             <div className="grid gap-1.5">
-              <Label htmlFor="gross">Сума Gross</Label>
+              <div className="flex h-5 items-center">
+                <Label htmlFor="gross">Сума Gross</Label>
+              </div>
               <Input
                 id="gross"
                 type="number"
@@ -285,7 +290,9 @@ export function QuickEntryDialog({
               />
             </div>
             <div className="grid gap-1.5">
-              <Label htmlFor="currency">Валюта</Label>
+              <div className="flex h-5 items-center">
+                <Label htmlFor="currency">Валюта</Label>
+              </div>
               <Select
                 value={form.currency}
                 onValueChange={(value) => value && setField("currency", value as Currency)}
@@ -303,7 +310,7 @@ export function QuickEntryDialog({
               </Select>
             </div>
             <div className="grid gap-1.5">
-              <div className="flex items-center gap-1.5">
+              <div className="flex h-5 items-center gap-1.5">
                 <Label htmlFor="fee">Комісія</Label>
                 <Tooltip>
                   <TooltipTrigger
@@ -334,7 +341,9 @@ export function QuickEntryDialog({
               />
             </div>
             <div className="grid gap-1.5">
-              <Label htmlFor="startDate">Дата початку</Label>
+              <div className="flex h-5 items-center">
+                <Label htmlFor="startDate">Дата початку</Label>
+              </div>
               <Input
                 id="startDate"
                 type="date"
@@ -343,7 +352,9 @@ export function QuickEntryDialog({
               />
             </div>
             <div className="grid gap-1.5">
-              <Label htmlFor="endDate">Дата завершення</Label>
+              <div className="flex h-5 items-center">
+                <Label htmlFor="endDate">Дата завершення</Label>
+              </div>
               <Input
                 id="endDate"
                 type="date"
@@ -352,7 +363,9 @@ export function QuickEntryDialog({
               />
             </div>
             <div className="grid gap-1.5">
-              <Label htmlFor="payoutDate">Дата виплати</Label>
+              <div className="flex h-5 items-center">
+                <Label htmlFor="payoutDate">Дата виплати</Label>
+              </div>
               <Input
                 id="payoutDate"
                 type="date"
@@ -361,7 +374,9 @@ export function QuickEntryDialog({
               />
             </div>
             <div className="grid gap-1.5 sm:col-span-2">
-              <Label htmlFor="notes">Нотатки</Label>
+              <div className="flex h-5 items-center">
+                <Label htmlFor="notes">Нотатки</Label>
+              </div>
               <Textarea
                 id="notes"
                 value={form.notes}
@@ -370,6 +385,8 @@ export function QuickEntryDialog({
               />
             </div>
           </div>
+
+          <p className="text-xs text-muted-foreground">{STATUS_DESCRIPTIONS[form.status]}</p>
 
           <p className="text-xs text-muted-foreground">
             Зафіксований курс EUR: {formatRate(lockedRate)} · ISO-тиждень{" "}

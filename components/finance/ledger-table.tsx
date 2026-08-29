@@ -37,10 +37,10 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { useFinance } from "@/components/finance/finance-provider";
-import { formatDate, formatMoney } from "@/lib/format";
+import { formatDate, formatMoney, formatSignedMoney } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { PLATFORM_LABELS, STATUS_LABELS } from "@/lib/labels";
-import { convertToDisplay } from "@/lib/tax-calculator";
+import { convertToDisplay, moneyNumber } from "@/lib/tax-calculator";
 import {
   PAYMENT_STATUSES,
   getTransactionStartDate,
@@ -57,10 +57,12 @@ const PLATFORM_VARIANT: Record<Platform, "default" | "secondary" | "outline" | "
   Other: "ghost",
 };
 
-const STATUS_VARIANT: Record<PaymentStatus, "default" | "secondary" | "outline"> = {
-  Paid: "default",
-  Pending: "secondary",
-  "In Progress": "outline",
+const STATUS_CLASS: Record<PaymentStatus, string> = {
+  "In Progress":
+    "border-transparent bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-200",
+  Pending:
+    "border-transparent bg-amber-100 text-amber-800 dark:bg-amber-900/50 dark:text-amber-200",
+  Paid: "border-transparent bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-200",
 };
 
 type LedgerTableProps = {
@@ -135,6 +137,8 @@ function RowActions({
 
 function TaxDetails({ row }: { row: TransactionView }) {
   const { displayCurrency, rates } = useFinance();
+  const totalTaxEur = moneyNumber(row.breakdown.spainTax + row.breakdown.companyTax);
+  const totalTaxDisplay = convertToDisplay(totalTaxEur, displayCurrency, rates);
   const spainTax = formatMoney(
     convertToDisplay(row.breakdown.spainTax, displayCurrency, rates),
     displayCurrency,
@@ -147,8 +151,12 @@ function TaxDetails({ row }: { row: TransactionView }) {
 
   return (
     <Tooltip>
-      <TooltipTrigger render={<Badge variant="secondary" className="cursor-help" />}>
-        Податки
+      <TooltipTrigger
+        render={
+          <span className="cursor-help tabular-nums text-destructive dark:text-red-400" />
+        }
+      >
+        {formatSignedMoney(-totalTaxDisplay, displayCurrency)}
       </TooltipTrigger>
       <TooltipContent className="max-w-xs text-left">{summary}</TooltipContent>
     </Tooltip>
@@ -173,17 +181,17 @@ export function LedgerTable({ onEdit }: LedgerTableProps) {
 
   return (
     <>
-      <Table className="min-w-[920px]">
+      <Table containerClassName="overflow-x-hidden" className="w-full table-fixed">
         <TableHeader>
           <TableRow>
-            <TableHead>Дата / Тиждень</TableHead>
-            <TableHead>Проєкт</TableHead>
-            <TableHead>Платформа</TableHead>
-            <TableHead>Gross (оригінал)</TableHead>
-            <TableHead>Податки</TableHead>
-            <TableHead>Net до отримання</TableHead>
-            <TableHead>Статус</TableHead>
-            <TableHead className="sticky right-0 z-20 w-10 bg-card">
+            <TableHead className="w-[14%]">Дата / Тиждень</TableHead>
+            <TableHead className="w-[30%]">Проєкт</TableHead>
+            <TableHead className="w-[10%]">Платформа</TableHead>
+            <TableHead className="w-[12%]">Gross (оригінал)</TableHead>
+            <TableHead className="w-[12%]">Податки</TableHead>
+            <TableHead className="w-[12%]">Net до отримання</TableHead>
+            <TableHead className="w-[8%]">Статус</TableHead>
+            <TableHead className="w-10 print:hidden">
               <span className="sr-only">Дії</span>
             </TableHead>
           </TableRow>
@@ -191,7 +199,7 @@ export function LedgerTable({ onEdit }: LedgerTableProps) {
         <TableBody>
           {filteredViews.map((row) => (
             <TableRow key={row.id}>
-              <TableCell>
+              <TableCell className="w-[14%] whitespace-normal">
                 <div className="font-medium">
                   {formatDate(getTransactionStartDate(row))}
                   {row.endDate ? ` — ${formatDate(row.endDate)}` : ""}
@@ -203,45 +211,43 @@ export function LedgerTable({ onEdit }: LedgerTableProps) {
                   </div>
                 ) : null}
               </TableCell>
-              <TableCell>
+              <TableCell className="w-[30%] max-w-0 overflow-hidden">
                 <Tooltip>
                   <TooltipTrigger
                     title={row.title}
-                    render={
-                      <div className="max-w-[200px] cursor-help truncate font-medium sm:max-w-[300px]" />
-                    }
+                    render={<div className="cursor-help truncate font-medium" />}
                   >
                     {row.title}
                   </TooltipTrigger>
                   <TooltipContent className="max-w-xs">{row.title}</TooltipContent>
                 </Tooltip>
                 {row.notes ? (
-                  <div className="max-w-[200px] truncate text-xs text-muted-foreground sm:max-w-[300px]">
-                    {row.notes}
-                  </div>
+                  <div className="truncate text-xs text-muted-foreground">{row.notes}</div>
                 ) : null}
               </TableCell>
-              <TableCell>
-                <Badge variant={PLATFORM_VARIANT[row.platform]}>
+              <TableCell className="w-[10%] overflow-hidden">
+                <Badge variant={PLATFORM_VARIANT[row.platform]} className="max-w-full truncate">
                   {PLATFORM_LABELS[row.platform]}
                 </Badge>
               </TableCell>
-              <TableCell className="tabular-nums">
+              <TableCell className="w-[12%] tabular-nums">
                 {formatMoney(row.grossAmount, row.currency)}
               </TableCell>
-              <TableCell>
+              <TableCell className="w-[12%]">
                 <TaxDetails row={row} />
               </TableCell>
-              <TableCell className="tabular-nums font-medium">
+              <TableCell className="w-[12%] tabular-nums font-medium">
                 {formatMoney(
                   convertToDisplay(row.breakdown.netPayout, displayCurrency, rates),
                   displayCurrency,
                 )}
               </TableCell>
-              <TableCell>
-                <Badge variant={STATUS_VARIANT[row.status]}>{STATUS_LABELS[row.status]}</Badge>
+              <TableCell className="w-[8%]">
+                <Badge variant="outline" className={STATUS_CLASS[row.status]}>
+                  {STATUS_LABELS[row.status]}
+                </Badge>
               </TableCell>
-              <TableCell className="sticky right-0 z-20 bg-card">
+              <TableCell className="w-10 print:hidden">
                 <RowActions
                   row={row}
                   onEdit={onEdit}

@@ -108,3 +108,63 @@
     @apply font-sans;
   }
 }
+
+@media print {
+  @page {
+    size: A4 portrait;
+    margin: 12mm;
+  }
+
+  html,
+  body {
+    background: #ffffff !important;
+    color: #111111 !important;
+  }
+
+  * {
+    box-shadow: none !important;
+    text-shadow: none !important;
+  }
+
+  button,
+  [data-slot="sonner"] {
+    display: none !important;
+  }
+
+  [data-slot="card"] {
+    break-inside: avoid;
+    background: #ffffff !important;
+    color: #111111 !important;
+    box-shadow: none !important;
+    outline: none !important;
+    border: 1px solid #d1d5db;
+  }
+
+  [data-slot="card-title"],
+  [data-slot="card-description"],
+  [data-slot="card-content"],
+  p,
+  h1,
+  h2,
+  span,
+  strong {
+    color: #111111 !important;
+  }
+
+  table {
+    width: 100% !important;
+    table-layout: fixed;
+    border-collapse: collapse;
+  }
+
+  th,
+  td {
+    background: #ffffff !important;
+    color: #111111 !important;
+    border-bottom: 1px solid #d1d5db;
+  }
+
+  th {
+    font-weight: 700;
+  }
+}

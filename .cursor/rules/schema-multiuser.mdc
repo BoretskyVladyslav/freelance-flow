@@ -1,0 +1,23 @@
+---
+description: Additive multi-user fields on Transaction/Project; never drop legacy rows
+globs: "{types/**/*.ts,lib/**/*.ts}"
+alwaysApply: false
+---
+
+# Schema and multi-user types
+
+- Persisted entity remains `Transaction`. Export `type Project = Transaction` for the CRM/Auth transition.
+- Identity fields `employeeId` and `createdBy` are optional strings. Do not add required fields that would fail `isTransaction` on existing records.
+- `isTransaction` / `parseBackup` must accept the new fields and ignore unknown extras.
+- Tax and FX math stay in `lib/tax-calculator.ts` and `lib/exchange-rates.ts`. Display quotes vs UAH do not change stored `toEur`.
+
+```ts
+// ❌ BAD — required identity drops old backups
+employeeId: string;
+createdBy: string;
+
+// ✅ GOOD
+employeeId?: string;
+createdBy?: string;
+export type Project = Transaction;
+```

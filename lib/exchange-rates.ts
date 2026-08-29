@@ -70,3 +70,20 @@ export function resolveRate(
   if (currency === BASE_CURRENCY) return 1;
   return rates?.toEur[currency] ?? LAST_RESORT_RATES.toEur[currency];
 }
+
+export function uahPerUnit(
+  currency: Currency,
+  rates: ExchangeRates | null | undefined,
+): number {
+  const source = rates ?? LAST_RESORT_RATES;
+  const uahToEur =
+    Number.isFinite(source.toEur.UAH) && source.toEur.UAH > 0
+      ? source.toEur.UAH
+      : LAST_RESORT_RATES.toEur.UAH;
+  if (currency === "UAH") return 1;
+  const unitToEur =
+    currency === BASE_CURRENCY
+      ? 1
+      : source.toEur[currency] ?? LAST_RESORT_RATES.toEur[currency];
+  return new Decimal(unitToEur).div(uahToEur).toNumber();
+}

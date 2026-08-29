@@ -13,6 +13,7 @@ import { QuickEntryDialog } from "@/components/finance/quick-entry-dialog";
 import { WeeklyChart } from "@/components/finance/weekly-chart";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { uahPerUnit } from "@/lib/exchange-rates";
 import { formatDate, formatRate } from "@/lib/format";
 import type { Transaction } from "@/types/finance";
 
@@ -29,19 +30,23 @@ export function Dashboard() {
   const [selectedProject, setSelectedProject] = useState<Transaction | null>(null);
 
   return (
-    <main className="mx-auto flex min-h-screen w-full max-w-7xl flex-col gap-6 px-4 py-6 sm:px-6 lg:px-8">
+    <main className="mx-auto flex min-h-screen w-full max-w-7xl flex-col gap-6 overflow-x-hidden px-4 py-6 sm:px-6 lg:px-8">
       <header className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         <div>
-          <p className="text-xs font-medium tracking-[0.18em] text-muted-foreground uppercase">
+          <p className="text-xs font-medium tracking-[0.18em] text-muted-foreground uppercase print:hidden">
             Фінансова CRM
           </p>
           <h1 className="text-2xl font-semibold tracking-tight">Freelance Flow</h1>
-          <p className="text-sm text-muted-foreground">
+          <p className="text-sm text-muted-foreground print:hidden">
             Базова валюта: EUR · Податок в Іспанії 19%, податок компанії 30% · Курс валют онлайн із
             фіксацією на дату створення
           </p>
+          <p className="hidden text-sm text-muted-foreground print:block">
+            Фінансовий звіт · {formatDate(new Date().toISOString())} · Валюта звіту:{" "}
+            {displayCurrency}
+          </p>
         </div>
-        <div className="flex w-full flex-wrap items-center gap-2 lg:w-auto lg:justify-end">
+        <div className="flex w-full flex-wrap items-center gap-2 print:hidden lg:w-auto lg:justify-end">
           <CurrencySwitcher value={displayCurrency} onChange={setDisplayCurrency} />
           <Button
             type="button"
@@ -68,8 +73,9 @@ export function Dashboard() {
         </div>
       </header>
 
-      <p className="text-xs text-muted-foreground" role="status">
-        Курс оновлено {formatDate(rates.fetchedAt)} · 1 USD = {formatRate(rates.toEur.USD)} EUR
+      <p className="text-xs text-muted-foreground print:hidden" role="status">
+        Курс оновлено {formatDate(rates.fetchedAt)} · 1 USD = {formatRate(uahPerUnit("USD", rates))}{" "}
+        UAH · 1 EUR = {formatRate(uahPerUnit("EUR", rates))} UAH
         {rates.stale ? " · використано збережений курс" : ""}
         {ratesError ? ` · ${ratesError}` : ""}
       </p>

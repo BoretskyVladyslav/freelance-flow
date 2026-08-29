@@ -8,6 +8,7 @@ alwaysApply: true
 - Money math lives in `lib/tax-calculator.ts`. UI, charts, and storage must call it — never reimplement tax steps inline.
 - Use `decimal.js` with `ROUND_HALF_UP`. Round **every intermediate amount** to 2 decimal places before the next step.
 - Do **not** round FX rates to 2 decimals. Store `toEur` / `exchangeRateAtCreation` at up to 8 decimal places; EUR is always `1`.
+- Header/display FX quotes are UAH-relative (`uahPerUnit`). Stored rates and the tax sequence remain EUR `toEur`.
 - Historical payouts lock `exchangeRateAtCreation`. Live gain/loss reruns the same sequence with the current `toEur` rate.
 - Display currency converts EUR totals only. Never change stored original amounts or recalculate tax in the display currency.
 - Browser storage keys and existing records are immutable migration inputs. Never clear or reset IndexedDB/LocalStorage during schema changes.

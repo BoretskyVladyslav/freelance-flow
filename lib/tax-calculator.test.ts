@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { normalizeEurRates } from "@/lib/exchange-rates";
+import { normalizeEurRates, uahPerUnit } from "@/lib/exchange-rates";
 import {
   calculateTaxSequence,
   calculateTransaction,
@@ -107,5 +107,22 @@ describe("exchange rate helpers", () => {
   it("uses half-up rounding for display money", () => {
     expect(moneyNumber(207.765)).toBe(207.77);
     expect(moneyNumber(207.764)).toBe(207.76);
+  });
+
+  it("quotes USD and EUR against UAH without rounding the rate to 2 decimals", () => {
+    const rates = {
+      base: "EUR" as const,
+      fetchedAt: "2026-08-29T00:00:00.000Z",
+      toEur: {
+        EUR: 1,
+        USD: 0.92,
+        UAH: 0.022,
+        PLN: 0.23,
+      },
+    };
+
+    expect(uahPerUnit("USD", rates)).toBeCloseTo(41.81818182, 5);
+    expect(uahPerUnit("EUR", rates)).toBeCloseTo(45.45454545, 5);
+    expect(uahPerUnit("UAH", rates)).toBe(1);
   });
 });

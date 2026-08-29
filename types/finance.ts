@@ -13,7 +13,7 @@ export const PAYMENT_STATUSES = ["Pending", "Paid", "In Progress"] as const;
 export type PaymentStatus = (typeof PAYMENT_STATUSES)[number];
 
 export const BASE_CURRENCY = "EUR" as const;
-export const BACKUP_SCHEMA_VERSION = 2;
+export const BACKUP_SCHEMA_VERSION = 3;
 
 export type Transaction = {
   id: string;
@@ -32,7 +32,11 @@ export type Transaction = {
   status: PaymentStatus;
   weekNumber: number;
   notes?: string;
+  employeeId?: string;
+  createdBy?: string;
 };
+
+export type Project = Transaction;
 
 export type TaxBreakdown = {
   grossInBase: number;
@@ -138,6 +142,8 @@ export function isTransaction(value: unknown): value is Transaction {
     return false;
   }
   if (row.notes !== undefined && typeof row.notes !== "string") return false;
+  if (row.employeeId !== undefined && typeof row.employeeId !== "string") return false;
+  if (row.createdBy !== undefined && typeof row.createdBy !== "string") return false;
   return true;
 }
 

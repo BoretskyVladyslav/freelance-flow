@@ -1,0 +1,20 @@
+---
+description: Equal-height cards, aligned modal grid, table-fixed ledger, print CSS
+globs: "{components/**/*.tsx,app/**/*.tsx,app/globals.css}"
+alwaysApply: false
+---
+
+# UI layout and print
+
+- Metric cards: `h-full flex flex-col justify-between`. Fixed-height title+icon row, value, subtext `mt-auto`. All five cards identical height.
+- Quick-add modal: strict `grid-cols-2`. Equal-height label rows so inputs align horizontally. Do not put helper text inside a 2-col cell.
+- Ledger: `table-fixed w-full`, no `min-w-*` and no horizontal scroll. Project column truncates (`max-w-0 overflow-hidden truncate`).
+- PDF is `window.print()` plus `@media print` in `app/globals.css`. No canvas, jspdf, or html2canvas.
+
+```tsx
+// ❌ BAD
+<Table className="min-w-[920px]" />
+
+// ✅ GOOD
+<Table containerClassName="overflow-x-hidden" className="w-full table-fixed" />
+```
