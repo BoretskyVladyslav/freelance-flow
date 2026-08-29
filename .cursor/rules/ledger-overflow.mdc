@@ -1,22 +1,28 @@
 ---
-description: Keep table overlays and truncated cells usable in overflow wrappers
+description: Keep ledger row action menus clickable and portaled
 globs: components/finance/ledger-table.tsx
 alwaysApply: false
 ---
 
-# Ledger overlays
+# Ledger row actions
 
-- Action menus must portal to `document.body`. Never rely on in-cell popups inside `overflow-x-auto`.
-- Do not size menu popups with `w-(--anchor-width)` for icon triggers — use `w-max min-w-44`.
-- Long titles truncate with `max-w-[200px] sm:max-w-[300px] truncate`. Full text lives in a Tooltip/`title`.
-- Tax column stays a compact Badge. Amounts belong in a hover tooltip, not extra row height.
+This project uses Base UI, not Radix `asChild`. Nesting `DropdownMenuTrigger` around `Button` creates two buttons and drops click handlers.
+
+- Trigger must be **one** native button. Style it with `buttonVariants`; do not `render={<Button />}`.
+- Portal once to `document.body` at `z-[9999]`. Do not wrap `DropdownMenuContent` in a second portal.
+- Stop click/pointer propagation on the trigger so table cells cannot swallow the event.
+- Edit items must call the parent `onEdit(row)` that sets selected project + opens the modal.
 
 ```tsx
-// ❌ BAD — clipped by the table scroller, 32px wide
-<DropdownMenuContent className="w-(--anchor-width)" />
+// ❌ BAD — nested interactive hosts, dead clicks
+<DropdownMenuTrigger render={<Button />}>...</DropdownMenuTrigger>
 
 // ✅ GOOD
-<DropdownMenuPortal>
-  <DropdownMenuContent className="z-[200] w-max min-w-44" />
-</DropdownMenuPortal>
+<DropdownMenuTrigger
+  type="button"
+  className={cn(buttonVariants({ variant: "ghost" }), "h-8 w-8 p-0")}
+  onClick={(event) => event.stopPropagation()}
+>
+  <MoreHorizontal />
+</DropdownMenuTrigger>
 ```

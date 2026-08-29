@@ -13,12 +13,11 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuPortal,
   DropdownMenuSub,
   DropdownMenuSubContent,
   DropdownMenuSubTrigger,
@@ -39,6 +38,7 @@ import {
 } from "@/components/ui/tooltip";
 import { useFinance } from "@/components/finance/finance-provider";
 import { formatDate, formatMoney } from "@/lib/format";
+import { cn } from "@/lib/utils";
 import { PLATFORM_LABELS, STATUS_LABELS } from "@/lib/labels";
 import { convertToDisplay } from "@/lib/tax-calculator";
 import {
@@ -67,6 +67,72 @@ type LedgerTableProps = {
   onEdit: (transaction: Transaction) => void;
 };
 
+function RowActions({
+  row,
+  onEdit,
+  onDelete,
+}: {
+  row: TransactionView;
+  onEdit: (transaction: Transaction) => void;
+  onDelete: (transaction: Transaction) => void;
+}) {
+  const { updateTransaction } = useFinance();
+  const [open, setOpen] = useState(false);
+
+  return (
+    <DropdownMenu open={open} onOpenChange={setOpen} modal={false}>
+      <DropdownMenuTrigger
+        type="button"
+        nativeButton
+        className={cn(buttonVariants({ variant: "ghost" }), "relative z-[1] h-8 w-8 p-0")}
+        onPointerDown={(event) => event.stopPropagation()}
+        onMouseDown={(event) => event.stopPropagation()}
+        onClick={(event) => event.stopPropagation()}
+        aria-label={`Дії для ${row.title}`}
+      >
+        <MoreHorizontal className="size-4" />
+        <span className="sr-only">Відкрити дії</span>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" side="bottom" className="z-[9999]">
+        <DropdownMenuItem
+          onClick={() => {
+            setOpen(false);
+            onEdit(row);
+          }}
+        >
+          Редагувати
+        </DropdownMenuItem>
+        <DropdownMenuSub>
+          <DropdownMenuSubTrigger>Змінити статус</DropdownMenuSubTrigger>
+          <DropdownMenuSubContent className="z-[9999]">
+            {PAYMENT_STATUSES.map((status) => (
+              <DropdownMenuItem
+                key={status}
+                disabled={row.status === status}
+                onClick={() => {
+                  updateTransaction(row.id, { status });
+                  setOpen(false);
+                }}
+              >
+                {STATUS_LABELS[status]}
+              </DropdownMenuItem>
+            ))}
+          </DropdownMenuSubContent>
+        </DropdownMenuSub>
+        <DropdownMenuItem
+          variant="destructive"
+          onClick={() => {
+            setOpen(false);
+            onDelete(row);
+          }}
+        >
+          Видалити
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
 function TaxDetails({ row }: { row: TransactionView }) {
   const { displayCurrency, rates } = useFinance();
   const spainTax = formatMoney(
@@ -90,14 +156,7 @@ function TaxDetails({ row }: { row: TransactionView }) {
 }
 
 export function LedgerTable({ onEdit }: LedgerTableProps) {
-  const {
-    filteredViews,
-    displayCurrency,
-    rates,
-    deleteTransaction,
-    updateTransaction,
-    hydrated,
-  } = useFinance();
+  const { filteredViews, displayCurrency, rates, deleteTransaction, hydrated } = useFinance();
   const [pendingDelete, setPendingDelete] = useState<Transaction | null>(null);
 
   if (!hydrated) {
@@ -124,7 +183,7 @@ export function LedgerTable({ onEdit }: LedgerTableProps) {
             <TableHead>Податки</TableHead>
             <TableHead>Net до отримання</TableHead>
             <TableHead>Статус</TableHead>
-            <TableHead className="w-10">
+            <TableHead className="sticky right-0 z-20 w-10 bg-card">
               <span className="sr-only">Дії</span>
             </TableHead>
           </TableRow>
@@ -182,47 +241,12 @@ export function LedgerTable({ onEdit }: LedgerTableProps) {
               <TableCell>
                 <Badge variant={STATUS_VARIANT[row.status]}>{STATUS_LABELS[row.status]}</Badge>
               </TableCell>
-              <TableCell>
-                <DropdownMenu modal={false}>
-                  <DropdownMenuTrigger
-                    nativeButton
-                    render={<Button type="button" variant="ghost" size="icon-sm" />}
-                  >
-                    <MoreHorizontal />
-                    <span className="sr-only">Відкрити дії</span>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuPortal>
-                    <DropdownMenuContent align="end" side="bottom" className="z-[200] w-max min-w-44">
-                      <DropdownMenuItem
-                        onClick={() => {
-                          onEdit(row);
-                        }}
-                      >
-                        Редагувати
-                      </DropdownMenuItem>
-                      <DropdownMenuSub>
-                        <DropdownMenuSubTrigger>Змінити статус</DropdownMenuSubTrigger>
-                        <DropdownMenuSubContent>
-                          {PAYMENT_STATUSES.map((status) => (
-                            <DropdownMenuItem
-                              key={status}
-                              disabled={row.status === status}
-                              onClick={() => updateTransaction(row.id, { status })}
-                            >
-                              {STATUS_LABELS[status]}
-                            </DropdownMenuItem>
-                          ))}
-                        </DropdownMenuSubContent>
-                      </DropdownMenuSub>
-                      <DropdownMenuItem
-                        variant="destructive"
-                        onClick={() => setPendingDelete(row)}
-                      >
-                        Видалити
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenuPortal>
-                </DropdownMenu>
+              <TableCell className="sticky right-0 z-20 bg-card">
+                <RowActions
+                  row={row}
+                  onEdit={onEdit}
+                  onDelete={(transaction) => setPendingDelete(transaction)}
+                />
               </TableCell>
             </TableRow>
           ))}

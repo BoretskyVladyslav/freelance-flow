@@ -25,8 +25,8 @@ export function Dashboard() {
     ratesRefreshing,
     refreshRates,
   } = useFinance();
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const [editing, setEditing] = useState<Transaction | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedProject, setSelectedProject] = useState<Transaction | null>(null);
 
   return (
     <main className="mx-auto flex min-h-screen w-full max-w-7xl flex-col gap-6 px-4 py-6 sm:px-6 lg:px-8">
@@ -58,8 +58,8 @@ export function Dashboard() {
           <Button
             type="button"
             onClick={() => {
-              setEditing(null);
-              setDialogOpen(true);
+              setSelectedProject(null);
+              setIsModalOpen(true);
             }}
           >
             <Plus />
@@ -84,21 +84,21 @@ export function Dashboard() {
         </CardHeader>
         <CardContent className="overflow-visible">
           <LedgerTable
-            onEdit={(transaction) => {
-              setEditing(transaction);
-              setDialogOpen(true);
+            onEdit={(project) => {
+              setSelectedProject(project);
+              setIsModalOpen(true);
             }}
           />
         </CardContent>
       </Card>
 
       <QuickEntryDialog
-        open={dialogOpen}
+        open={isModalOpen}
         onOpenChange={(open) => {
-          setDialogOpen(open);
-          if (!open) setEditing(null);
+          setIsModalOpen(open);
+          if (!open) setSelectedProject(null);
         }}
-        transaction={editing}
+        transaction={selectedProject}
       />
     </main>
   );
