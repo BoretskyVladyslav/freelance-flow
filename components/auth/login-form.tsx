@@ -1,16 +1,15 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Button } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { createBrowserSupabaseClient } from "@/lib/supabase/client";
+import { cn } from "@/lib/utils";
 
 export function LoginForm() {
-  const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -56,8 +55,7 @@ export function LoginForm() {
         return;
       }
 
-      router.replace("/");
-      router.refresh();
+      window.location.assign("/");
     } finally {
       setSubmitting(false);
     }
@@ -73,13 +71,17 @@ export function LoginForm() {
   }
 
   return (
-    <form onSubmit={onSubmit} className="grid gap-4">
+    <form method="post" action="/login" onSubmit={onSubmit} className="grid gap-4">
       <div className="grid gap-1.5">
         <Label htmlFor="email">Email</Label>
         <Input
           id="email"
+          name="username"
           type="email"
-          autoComplete="email"
+          autoComplete="username"
+          autoCapitalize="none"
+          autoCorrect="off"
+          spellCheck={false}
           required
           value={email}
           onChange={(event) => setEmail(event.target.value)}
@@ -90,6 +92,7 @@ export function LoginForm() {
         <Label htmlFor="password">Пароль</Label>
         <Input
           id="password"
+          name="password"
           type="password"
           autoComplete="current-password"
           required
@@ -97,9 +100,9 @@ export function LoginForm() {
           onChange={(event) => setPassword(event.target.value)}
         />
       </div>
-      <Button type="submit" disabled={submitting} className="w-full">
+      <button type="submit" disabled={submitting} className={cn(buttonVariants(), "w-full")}>
         Увійти
-      </Button>
+      </button>
     </form>
   );
 }
