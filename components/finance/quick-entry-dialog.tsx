@@ -35,7 +35,7 @@ import {
   STATUS_DESCRIPTIONS,
   STATUS_LABELS,
 } from "@/lib/labels";
-import { calculateTransaction } from "@/lib/tax-calculator";
+import { calculateTransaction, convertToDisplay } from "@/lib/tax-calculator";
 import { isoWeekFromIsoDate, todayIsoDate } from "@/lib/week";
 import {
   CURRENCIES,
@@ -134,6 +134,20 @@ export function QuickEntryDialog({
       return null;
     }
   }, [customFee, form.currency, grossAmount, lockedRate, rates.toEur]);
+  const previewRates = useMemo(
+    () => ({
+      ...rates,
+      toEur: { ...rates.toEur, [form.currency]: lockedRate },
+    }),
+    [form.currency, lockedRate, rates],
+  );
+
+  function formatPreviewAmount(amountEur: number): string {
+    return formatMoney(
+      convertToDisplay(amountEur, form.currency, previewRates),
+      form.currency,
+    );
+  }
 
   function setField<K extends keyof FormState>(key: K, value: FormState[K]) {
     setForm((current) => ({ ...current, [key]: value }));
@@ -208,7 +222,7 @@ export function QuickEntryDialog({
             </DialogDescription>
           </DialogHeader>
 
-          <div className="grid gap-3 sm:grid-cols-2">
+          <div className="grid items-start gap-3 sm:grid-cols-2">
             <div className="grid gap-1.5 sm:col-span-2">
               <Label htmlFor="title">Назва проєкту</Label>
               <Input
@@ -219,14 +233,14 @@ export function QuickEntryDialog({
                 placeholder="Лендінг для клієнта"
               />
             </div>
-            <div className="grid gap-1.5">
+            <div className="flex flex-col gap-1.5">
               <Label htmlFor="platform">Платформа</Label>
               <Select
                 value={form.platform}
                 onValueChange={(value) => value && setField("platform", value as Platform)}
               >
                 <SelectTrigger id="platform" className="w-full">
-                  <SelectValue />
+                  <SelectValue>{PLATFORM_LABELS[form.platform]}</SelectValue>
                 </SelectTrigger>
                 <SelectContent alignItemWithTrigger={false}>
                   {PLATFORMS.map((platform) => (
@@ -236,15 +250,18 @@ export function QuickEntryDialog({
                   ))}
                 </SelectContent>
               </Select>
+              <p className="min-h-8 text-xs text-transparent" aria-hidden="true">
+                Поле вирівнювання
+              </p>
             </div>
-            <div className="grid gap-1.5">
+            <div className="flex flex-col gap-1.5">
               <Label htmlFor="status">Статус</Label>
               <Select
                 value={form.status}
                 onValueChange={(value) => value && setField("status", value as PaymentStatus)}
               >
                 <SelectTrigger id="status" className="w-full">
-                  <SelectValue />
+                  <SelectValue>{STATUS_LABELS[form.status]}</SelectValue>
                 </SelectTrigger>
                 <SelectContent alignItemWithTrigger={false}>
                   {PAYMENT_STATUSES.map((status) => (
@@ -254,7 +271,7 @@ export function QuickEntryDialog({
                   ))}
                 </SelectContent>
               </Select>
-              <p className="text-xs text-muted-foreground">
+              <p className="min-h-8 text-xs text-muted-foreground">
                 {STATUS_DESCRIPTIONS[form.status]}
               </p>
             </div>
@@ -277,7 +294,7 @@ export function QuickEntryDialog({
                 onValueChange={(value) => value && setField("currency", value as Currency)}
               >
                 <SelectTrigger id="currency" className="w-full">
-                  <SelectValue />
+                  <SelectValue>{form.currency}</SelectValue>
                 </SelectTrigger>
                 <SelectContent alignItemWithTrigger={false}>
                   {CURRENCIES.map((currency) => (
@@ -365,20 +382,28 @@ export function QuickEntryDialog({
           {preview ? (
             <div className="grid grid-cols-2 gap-2 rounded-lg border bg-muted/40 p-3 text-xs sm:grid-cols-4">
               <div>
-                <div className="text-muted-foreground">База</div>
-                <div className="tabular-nums">{formatMoney(preview.taxableBase)}</div>
+                <div className="text-muted-foreground">База ({form.currency})</div>
+                <div className="tabular-nums">
+                  {formatPreviewAmount(preview.taxableBase)}
+                </div>
               </div>
               <div>
-                <div className="text-muted-foreground">Іспанія 19%</div>
-                <div className="tabular-nums">{formatMoney(preview.spainTax)}</div>
+                <div className="text-muted-foreground">Іспанія 19% ({form.currency})</div>
+                <div className="tabular-nums">
+                  {formatPreviewAmount(preview.spainTax)}
+                </div>
               </div>
               <div>
-                <div className="text-muted-foreground">Фірма 30%</div>
-                <div className="tabular-nums">{formatMoney(preview.companyTax)}</div>
+                <div className="text-muted-foreground">Фірма 30% ({form.currency})</div>
+                <div className="tabular-nums">
+                  {formatPreviewAmount(preview.companyTax)}
+                </div>
               </div>
               <div>
-                <div className="text-muted-foreground">Net</div>
-                <div className="tabular-nums font-medium">{formatMoney(preview.netPayout)}</div>
+                <div className="text-muted-foreground">Net ({form.currency})</div>
+                <div className="tabular-nums font-medium">
+                  {formatPreviewAmount(preview.netPayout)}
+                </div>
               </div>
             </div>
           ) : null}

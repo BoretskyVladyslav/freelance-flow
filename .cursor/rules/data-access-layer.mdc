@@ -1,0 +1,22 @@
+---
+description: Keep persistence and financial orchestration replaceable for CRM scaling
+globs: "{services/**/*.ts,lib/storage.ts,components/finance/finance-provider.tsx}"
+alwaysApply: false
+---
+
+# Data access layer
+
+- UI components never import `lib/storage.ts` directly. Use a service interface from `services/`.
+- `services/projects.ts` owns the active project repository. A future Supabase adapter must implement the same interface.
+- Keep storage keys and legacy fields stable. Schema evolution is additive; new entity fields are optional.
+- Financial orchestration belongs in `services/financials.ts`; money math remains in `lib/tax-calculator.ts`.
+- Do not mix browser APIs into repository interfaces.
+
+```ts
+// Bad: component coupled to IndexedDB
+const projects = await get("freelance-flow/transactions");
+
+// Good: replaceable repository boundary
+const snapshot = await browserProjectsRepository.load();
+```
+

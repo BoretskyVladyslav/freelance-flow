@@ -83,8 +83,10 @@ function TaxDetails({ row }: { row: TransactionView }) {
 
   return (
     <Popover>
-      <PopoverTrigger render={<Button variant="ghost" size="sm" />}>
-        Податки
+      <PopoverTrigger
+        render={<Button variant="ghost" size="sm" className="h-auto whitespace-normal py-1" />}
+      >
+        19% Іспанія + 30% Фірма
       </PopoverTrigger>
       <PopoverContent className="w-72" align="end">
         <PopoverHeader>
@@ -150,7 +152,7 @@ export function LedgerTable({ onEdit }: LedgerTableProps) {
           <TableHead>Платформа</TableHead>
           <TableHead>Gross (оригінал)</TableHead>
           <TableHead>Податки</TableHead>
-          <TableHead>Net до виплати</TableHead>
+          <TableHead>Net до отримання</TableHead>
           <TableHead>Статус</TableHead>
           <TableHead className="w-10">
             <span className="sr-only">Дії</span>
@@ -199,12 +201,12 @@ export function LedgerTable({ onEdit }: LedgerTableProps) {
               <Badge variant={STATUS_VARIANT[row.status]}>{STATUS_LABELS[row.status]}</Badge>
             </TableCell>
             <TableCell>
-              <DropdownMenu>
+              <DropdownMenu modal={false}>
                 <DropdownMenuTrigger render={<Button variant="ghost" size="icon-sm" />}>
                   <MoreHorizontal />
                   <span className="sr-only">Відкрити дії</span>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
+                <DropdownMenuContent align="end" className="z-[100]">
                   <DropdownMenuItem onClick={() => onEdit(row)}>Редагувати</DropdownMenuItem>
                   <DropdownMenuSub>
                     <DropdownMenuSubTrigger>Змінити статус</DropdownMenuSubTrigger>

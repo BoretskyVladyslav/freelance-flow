@@ -18,6 +18,8 @@ export const BACKUP_SCHEMA_VERSION = 2;
 export type Transaction = {
   id: string;
   title: string;
+  clientId?: string;
+  clientName?: string;
   platform: Platform;
   grossAmount: number;
   currency: Currency;
@@ -113,6 +115,8 @@ export function isTransaction(value: unknown): value is Transaction {
   const row = value as Record<string, unknown>;
   if (typeof row.id !== "string" || row.id.trim() === "") return false;
   if (typeof row.title !== "string" || row.title.trim() === "") return false;
+  if (row.clientId !== undefined && typeof row.clientId !== "string") return false;
+  if (row.clientName !== undefined && typeof row.clientName !== "string") return false;
   if (!isPlatform(row.platform)) return false;
   if (!isFiniteNumber(row.grossAmount) || row.grossAmount < 0) return false;
   if (!isCurrency(row.currency)) return false;

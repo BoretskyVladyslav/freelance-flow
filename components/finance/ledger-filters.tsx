@@ -41,7 +41,11 @@ export function LedgerFilters() {
         }
       >
         <SelectTrigger aria-label="Фільтр за платформою" className="min-w-40">
-          <SelectValue />
+          <SelectValue>
+            {filters.platform === "all"
+              ? "Всі платформи"
+              : PLATFORM_LABELS[filters.platform]}
+          </SelectValue>
         </SelectTrigger>
         <SelectContent alignItemWithTrigger={false}>
           <SelectItem value="all">Всі платформи</SelectItem>
@@ -60,7 +64,9 @@ export function LedgerFilters() {
         }
       >
         <SelectTrigger aria-label="Фільтр за статусом" className="min-w-36">
-          <SelectValue />
+          <SelectValue>
+            {filters.status === "all" ? "Всі статуси" : STATUS_LABELS[filters.status]}
+          </SelectValue>
         </SelectTrigger>
         <SelectContent alignItemWithTrigger={false}>
           <SelectItem value="all">Всі статуси</SelectItem>
@@ -79,7 +85,9 @@ export function LedgerFilters() {
         }
       >
         <SelectTrigger aria-label="Фільтр за періодом" className="min-w-36">
-          <SelectValue />
+          <SelectValue>
+            {filters.month === "all" ? "Всі періоди" : filters.month}
+          </SelectValue>
         </SelectTrigger>
         <SelectContent alignItemWithTrigger={false}>
           <SelectItem value="all">Всі періоди</SelectItem>
@@ -98,7 +106,9 @@ export function LedgerFilters() {
         }
       >
         <SelectTrigger aria-label="Фільтр за тижнем" className="min-w-36">
-          <SelectValue />
+          <SelectValue>
+            {filters.week === "all" ? "Всі тижні" : filters.week.replace("-W", " Т")}
+          </SelectValue>
         </SelectTrigger>
         <SelectContent alignItemWithTrigger={false}>
           <SelectItem value="all">Всі тижні</SelectItem>

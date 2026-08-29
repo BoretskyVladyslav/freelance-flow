@@ -13,22 +13,16 @@ import { toast } from "sonner";
 import { useExchangeRates } from "@/hooks/use-exchange-rates";
 import {
   applyFilters,
-  summarize,
-  toDisplayTotals,
-  weeklySeries,
-  withBreakdowns,
   type DashboardTotals,
   type TransactionView,
   type WeeklyPoint,
 } from "@/lib/aggregates";
 import { resolveRate } from "@/lib/exchange-rates";
 import {
-  loadSnapshot,
-  parseImportedBackup,
-  saveSnapshot,
-  serializeBackup,
+  browserProjectsRepository,
   type FinanceSnapshot,
-} from "@/lib/storage";
+} from "@/services/projects";
+import { buildFinancialOverview } from "@/services/financials";
 import { isoWeekFromIsoDate } from "@/lib/week";
 import {
   DEFAULT_FILTERS,
@@ -86,7 +80,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
   const exchange = useExchangeRates(snapshot.lastKnownRates);
 
   useEffect(() => {
-    void loadSnapshot().then((loaded) => {
+    void browserProjectsRepository.load().then((loaded) => {
       setSnapshot(loaded);
       setHydrated(true);
     });
@@ -94,7 +88,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (!hydrated) return;
-    void saveSnapshot(snapshot);
+    void browserProjectsRepository.save(snapshot);
   }, [hydrated, snapshot]);
 
   useEffect(() => {
@@ -107,20 +101,17 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     });
   }, [exchange.rates, hydrated]);
 
-  const views = useMemo(
-    () => withBreakdowns(snapshot.transactions, exchange.rates),
-    [snapshot.transactions, exchange.rates],
+  const overview = useMemo(
+    () =>
+      buildFinancialOverview(
+        snapshot.transactions,
+        exchange.rates,
+        snapshot.displayCurrency,
+      ),
+    [exchange.rates, snapshot.displayCurrency, snapshot.transactions],
   );
+  const { views, totals, displayTotals, weekly } = overview;
   const filteredViews = useMemo(() => applyFilters(views, filters), [views, filters]);
-  const totals = useMemo(() => summarize(views), [views]);
-  const displayTotals = useMemo(
-    () => toDisplayTotals(totals, snapshot.displayCurrency, exchange.rates),
-    [totals, snapshot.displayCurrency, exchange.rates],
-  );
-  const weekly = useMemo(
-    () => weeklySeries(views, snapshot.displayCurrency, exchange.rates),
-    [views, snapshot.displayCurrency, exchange.rates],
-  );
 
   const addTransaction = useCallback(
     (
@@ -178,20 +169,23 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const exportBackup = useCallback(() => {
-    const payload = serializeBackup(snapshot);
+    const payload = browserProjectsRepository.serializeBackup(snapshot);
     const blob = new Blob([payload], { type: "application/json" });
     const url = URL.createObjectURL(blob);
     const anchor = document.createElement("a");
     const stamp = new Date().toISOString().slice(0, 10);
     anchor.href = url;
     anchor.download = `freelance-flow-backup-${stamp}.json`;
+    anchor.style.display = "none";
+    document.body.appendChild(anchor);
     anchor.click();
-    URL.revokeObjectURL(url);
+    anchor.remove();
+    window.setTimeout(() => URL.revokeObjectURL(url), 0);
     toast.success("Резервну копію експортовано.");
   }, [snapshot]);
 
   const importBackup = useCallback((raw: string) => {
-    const imported = parseImportedBackup(raw);
+    const imported = browserProjectsRepository.parseBackup(raw);
     setSnapshot(imported);
     toast.success(`Імпортовано транзакцій: ${imported.transactions.length}.`);
   }, []);

@@ -51,6 +51,22 @@ describe("parseBackup", () => {
     expect(parsed.transactions[0].payoutDate).toBe("2026-08-29");
   });
 
+  it("accepts optional client references without changing legacy records", () => {
+    const transaction = {
+      ...validTransaction,
+      clientId: "client_42",
+      clientName: "Acme Studio",
+    };
+    const parsed = parseBackup({
+      version: BACKUP_SCHEMA_VERSION,
+      exportedAt: "2026-08-29T10:00:00.000Z",
+      transactions: [transaction],
+    });
+
+    expect(parsed.transactions[0].clientId).toBe("client_42");
+    expect(parsed.transactions[0].clientName).toBe("Acme Studio");
+  });
+
   it("accepts a versioned envelope with valid transactions", () => {
     const backup: BackupEnvelope = {
       version: BACKUP_SCHEMA_VERSION,
