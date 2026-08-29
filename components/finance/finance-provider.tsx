@@ -185,13 +185,13 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     anchor.download = `freelance-flow-backup-${stamp}.json`;
     anchor.click();
     URL.revokeObjectURL(url);
-    toast.success("Backup exported.");
+    toast.success("Резервну копію експортовано.");
   }, [snapshot]);
 
   const importBackup = useCallback((raw: string) => {
     const imported = parseImportedBackup(raw);
     setSnapshot(imported);
-    toast.success(`Imported ${imported.transactions.length} transactions.`);
+    toast.success(`Імпортовано транзакцій: ${imported.transactions.length}.`);
   }, []);
 
   const value = useMemo<FinanceContextValue>(

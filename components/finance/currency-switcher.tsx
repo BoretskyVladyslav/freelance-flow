@@ -22,7 +22,7 @@ export function CurrencySwitcher({ value, onChange }: CurrencySwitcherProps) {
         if (next) onChange(next as Currency);
       }}
     >
-      <SelectTrigger aria-label="Display currency" className="min-w-28">
+      <SelectTrigger aria-label="Валюта відображення" className="min-w-28">
         <SelectValue />
       </SelectTrigger>
       <SelectContent align="end" alignItemWithTrigger={false}>

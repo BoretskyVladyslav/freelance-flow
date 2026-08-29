@@ -20,8 +20,10 @@ export function WeeklyChart() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Weekly progression</CardTitle>
-        <CardDescription>Gross revenue vs net payout by ISO week.</CardDescription>
+        <CardTitle>Динаміка за тижнями</CardTitle>
+        <CardDescription>
+          Валовий дохід (Gross) проти чистої виплати (Net) за тижнями.
+        </CardDescription>
       </CardHeader>
       <CardContent>
         <div className="h-72 w-full">
@@ -34,7 +36,7 @@ export function WeeklyChart() {
                   tickLine={false}
                   axisLine={false}
                   tickFormatter={(value: number) =>
-                    new Intl.NumberFormat("en-IE", { notation: "compact" }).format(value)
+                    new Intl.NumberFormat("uk-UA", { notation: "compact" }).format(value)
                   }
                 />
                 <Tooltip
@@ -44,12 +46,12 @@ export function WeeklyChart() {
                 />
                 <Legend />
                 <Bar dataKey="gross" name="Gross" fill="#3b6cb5" radius={[4, 4, 0, 0]} />
-                <Bar dataKey="net" name="Net payout" fill="#2a9d8f" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="net" name="Net" fill="#2a9d8f" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           ) : (
             <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
-              Add a project to see week-over-week revenue.
+              Додайте проєкт, щоб побачити графік динаміки доходів.
             </div>
           )}
         </div>

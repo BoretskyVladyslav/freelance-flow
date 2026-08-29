@@ -27,6 +27,7 @@ import {
 } from "@/components/ui/table";
 import { useFinance } from "@/components/finance/finance-provider";
 import { formatDate, formatMoney, formatSignedMoney } from "@/lib/format";
+import { PLATFORM_LABELS, STATUS_LABELS } from "@/lib/labels";
 import { convertToDisplay } from "@/lib/tax-calculator";
 import type { PaymentStatus, Platform, Transaction } from "@/types/finance";
 import type { TransactionView } from "@/lib/aggregates";
@@ -51,25 +52,25 @@ type LedgerTableProps = {
 function TaxDetails({ row }: { row: TransactionView }) {
   const { displayCurrency, rates } = useFinance();
   const items = [
-    ["Gross in EUR", row.breakdown.grossInBase],
-    ["Fee in EUR", row.breakdown.feeInBase],
-    ["Taxable base", row.breakdown.taxableBase],
-    ["Spain tax 19%", row.breakdown.spainTax],
-    ["Company tax 30%", row.breakdown.companyTax],
-    ["Net at creation", row.breakdown.netPayout],
-    ["Net at live rate", row.breakdown.currentNetPayoutAtLiveRate],
+    ["Gross у EUR", row.breakdown.grossInBase],
+    ["Комісія у EUR", row.breakdown.feeInBase],
+    ["Оподатковувана база", row.breakdown.taxableBase],
+    ["Податок в Іспанії 19%", row.breakdown.spainTax],
+    ["Податок фірми 30%", row.breakdown.companyTax],
+    ["Net на дату створення", row.breakdown.netPayout],
+    ["Net за актуальним курсом", row.breakdown.currentNetPayoutAtLiveRate],
   ] as const;
 
   return (
     <Popover>
       <PopoverTrigger render={<Button variant="ghost" size="sm" />}>
-        Taxes
+        Податки
       </PopoverTrigger>
       <PopoverContent className="w-72" align="end">
         <PopoverHeader>
-          <PopoverTitle>Tax breakdown</PopoverTitle>
+          <PopoverTitle>Розбивка податків</PopoverTitle>
           <PopoverDescription>
-            Sequence is rounded to 2 decimals at every step.
+            Кожен крок послідовності округлено до 2 знаків після коми.
           </PopoverDescription>
         </PopoverHeader>
         <dl className="grid gap-1.5 text-sm">
@@ -82,7 +83,7 @@ function TaxDetails({ row }: { row: TransactionView }) {
             </div>
           ))}
           <div className="flex items-center justify-between gap-3 border-t pt-1.5">
-            <dt className="text-muted-foreground">Gain / loss</dt>
+            <dt className="text-muted-foreground">Курсова різниця</dt>
             <dd className="tabular-nums">
               {formatSignedMoney(
                 convertToDisplay(row.breakdown.currencyGainLoss, displayCurrency, rates),
@@ -100,13 +101,13 @@ export function LedgerTable({ onEdit }: LedgerTableProps) {
   const { filteredViews, displayCurrency, rates, deleteTransaction, hydrated } = useFinance();
 
   if (!hydrated) {
-    return <p className="text-sm text-muted-foreground">Loading ledger…</p>;
+    return <p className="text-sm text-muted-foreground">Завантаження журналу…</p>;
   }
 
   if (filteredViews.length === 0) {
     return (
       <p className="rounded-lg border border-dashed p-8 text-center text-sm text-muted-foreground">
-        No projects match the current filters.
+        Немає проєктів, які відповідають вибраним фільтрам.
       </p>
     );
   }
@@ -115,15 +116,15 @@ export function LedgerTable({ onEdit }: LedgerTableProps) {
     <Table>
       <TableHeader>
         <TableRow>
-          <TableHead>Date / Week</TableHead>
-          <TableHead>Project</TableHead>
-          <TableHead>Platform</TableHead>
-          <TableHead>Original gross</TableHead>
-          <TableHead>Taxes</TableHead>
-          <TableHead>Net payout</TableHead>
-          <TableHead>Status</TableHead>
+          <TableHead>Дата / Тиждень</TableHead>
+          <TableHead>Проєкт</TableHead>
+          <TableHead>Платформа</TableHead>
+          <TableHead>Gross (оригінал)</TableHead>
+          <TableHead>Податки</TableHead>
+          <TableHead>Net до виплати</TableHead>
+          <TableHead>Статус</TableHead>
           <TableHead className="w-10">
-            <span className="sr-only">Actions</span>
+            <span className="sr-only">Дії</span>
           </TableHead>
         </TableRow>
       </TableHeader>
@@ -132,7 +133,7 @@ export function LedgerTable({ onEdit }: LedgerTableProps) {
           <TableRow key={row.id}>
             <TableCell>
               <div className="font-medium">{formatDate(row.date)}</div>
-              <div className="text-xs text-muted-foreground">W{row.weekNumber}</div>
+              <div className="text-xs text-muted-foreground">Т{row.weekNumber}</div>
             </TableCell>
             <TableCell>
               <div className="font-medium">{row.title}</div>
@@ -141,7 +142,9 @@ export function LedgerTable({ onEdit }: LedgerTableProps) {
               ) : null}
             </TableCell>
             <TableCell>
-              <Badge variant={PLATFORM_VARIANT[row.platform]}>{row.platform}</Badge>
+              <Badge variant={PLATFORM_VARIANT[row.platform]}>
+                {PLATFORM_LABELS[row.platform]}
+              </Badge>
             </TableCell>
             <TableCell className="tabular-nums">
               {formatMoney(row.grossAmount, row.currency)}
@@ -156,24 +159,24 @@ export function LedgerTable({ onEdit }: LedgerTableProps) {
               )}
             </TableCell>
             <TableCell>
-              <Badge variant={STATUS_VARIANT[row.status]}>{row.status}</Badge>
+              <Badge variant={STATUS_VARIANT[row.status]}>{STATUS_LABELS[row.status]}</Badge>
             </TableCell>
             <TableCell>
               <DropdownMenu>
                 <DropdownMenuTrigger render={<Button variant="ghost" size="icon-sm" />}>
                   <MoreHorizontal />
-                  <span className="sr-only">Open actions</span>
+                  <span className="sr-only">Відкрити дії</span>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
-                  <DropdownMenuItem onClick={() => onEdit(row)}>Edit</DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => onEdit(row)}>Редагувати</DropdownMenuItem>
                   <DropdownMenuItem
                     variant="destructive"
                     onClick={() => {
-                      const confirmed = window.confirm(`Delete “${row.title}”?`);
+                      const confirmed = window.confirm(`Видалити «${row.title}»?`);
                       if (confirmed) deleteTransaction(row.id);
                     }}
                   >
-                    Delete
+                    Видалити
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>

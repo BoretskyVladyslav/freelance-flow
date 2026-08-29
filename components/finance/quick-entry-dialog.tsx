@@ -24,6 +24,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useFinance } from "@/components/finance/finance-provider";
 import { resolveRate } from "@/lib/exchange-rates";
 import { formatMoney, formatRate } from "@/lib/format";
+import { PLATFORM_LABELS, STATUS_LABELS } from "@/lib/labels";
 import { calculateTransaction } from "@/lib/tax-calculator";
 import { isoWeekFromIsoDate, todayIsoDate } from "@/lib/week";
 import {
@@ -123,15 +124,15 @@ export function QuickEntryDialog({
   }
 
   function validate(): string | null {
-    if (!form.title.trim()) return "Project name is required.";
+    if (!form.title.trim()) return "Назва проєкту обовʼязкова.";
     if (!Number.isFinite(grossAmount) || grossAmount <= 0) {
-      return "Gross amount must be greater than 0.";
+      return "Сума Gross має бути більшою за 0.";
     }
     if (!Number.isFinite(customFee) || customFee < 0) {
-      return "Fee cannot be negative.";
+      return "Комісія не може бути відʼємною.";
     }
-    if (customFee > grossAmount) return "Fee cannot exceed gross amount.";
-    if (!form.date) return "Date is required.";
+    if (customFee > grossAmount) return "Комісія не може перевищувати суму Gross.";
+    if (!form.date) return "Дата обовʼязкова.";
     return null;
   }
 
@@ -160,10 +161,10 @@ export function QuickEntryDialog({
         ...payload,
         weekNumber: isoWeekFromIsoDate(form.date),
       });
-      toast.success("Project updated.");
+      toast.success("Проєкт оновлено.");
     } else {
       addTransaction(payload);
-      toast.success("Project added.");
+      toast.success("Проєкт додано.");
     }
     onOpenChange(false);
   }
@@ -173,25 +174,25 @@ export function QuickEntryDialog({
       <DialogContent className="sm:max-w-lg" showCloseButton>
         <form onSubmit={onSubmit} className="grid gap-4">
           <DialogHeader>
-            <DialogTitle>{editing ? "Edit project" : "Quick entry"}</DialogTitle>
+            <DialogTitle>{editing ? "Редагувати проєкт" : "Швидке додавання"}</DialogTitle>
             <DialogDescription>
-              Amounts stay in original currency. EUR conversion is locked at creation.
+              Суми зберігаються в оригінальній валюті. Курс до EUR фіксується на дату створення.
             </DialogDescription>
           </DialogHeader>
 
           <div className="grid gap-3 sm:grid-cols-2">
             <div className="grid gap-1.5 sm:col-span-2">
-              <Label htmlFor="title">Project name</Label>
+              <Label htmlFor="title">Назва проєкту</Label>
               <Input
                 id="title"
                 autoFocus
                 value={form.title}
                 onChange={(event) => setField("title", event.target.value)}
-                placeholder="Landing page for Acme"
+                placeholder="Лендінг для клієнта"
               />
             </div>
             <div className="grid gap-1.5">
-              <Label htmlFor="platform">Platform</Label>
+              <Label htmlFor="platform">Платформа</Label>
               <Select
                 value={form.platform}
                 onValueChange={(value) => value && setField("platform", value as Platform)}
@@ -202,14 +203,14 @@ export function QuickEntryDialog({
                 <SelectContent alignItemWithTrigger={false}>
                   {PLATFORMS.map((platform) => (
                     <SelectItem key={platform} value={platform}>
-                      {platform}
+                      {PLATFORM_LABELS[platform]}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
             <div className="grid gap-1.5">
-              <Label htmlFor="status">Status</Label>
+              <Label htmlFor="status">Статус</Label>
               <Select
                 value={form.status}
                 onValueChange={(value) => value && setField("status", value as PaymentStatus)}
@@ -220,14 +221,14 @@ export function QuickEntryDialog({
                 <SelectContent alignItemWithTrigger={false}>
                   {PAYMENT_STATUSES.map((status) => (
                     <SelectItem key={status} value={status}>
-                      {status}
+                      {STATUS_LABELS[status]}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
             <div className="grid gap-1.5">
-              <Label htmlFor="gross">Gross amount</Label>
+              <Label htmlFor="gross">Сума Gross</Label>
               <Input
                 id="gross"
                 type="number"
@@ -239,7 +240,7 @@ export function QuickEntryDialog({
               />
             </div>
             <div className="grid gap-1.5">
-              <Label htmlFor="currency">Currency</Label>
+              <Label htmlFor="currency">Валюта</Label>
               <Select
                 value={form.currency}
                 onValueChange={(value) => value && setField("currency", value as Currency)}
@@ -257,7 +258,7 @@ export function QuickEntryDialog({
               </Select>
             </div>
             <div className="grid gap-1.5">
-              <Label htmlFor="fee">Custom fee</Label>
+              <Label htmlFor="fee">Комісія</Label>
               <Input
                 id="fee"
                 type="number"
@@ -269,7 +270,7 @@ export function QuickEntryDialog({
               />
             </div>
             <div className="grid gap-1.5">
-              <Label htmlFor="date">Date</Label>
+              <Label htmlFor="date">Дата</Label>
               <Input
                 id="date"
                 type="date"
@@ -278,32 +279,33 @@ export function QuickEntryDialog({
               />
             </div>
             <div className="grid gap-1.5 sm:col-span-2">
-              <Label htmlFor="notes">Notes</Label>
+              <Label htmlFor="notes">Нотатки</Label>
               <Textarea
                 id="notes"
                 value={form.notes}
                 onChange={(event) => setField("notes", event.target.value)}
-                placeholder="Optional"
+                placeholder="Необовʼязково"
               />
             </div>
           </div>
 
           <p className="text-xs text-muted-foreground">
-            Locked EUR rate: {formatRate(lockedRate)} · ISO week {form.date ? isoWeekFromIsoDate(form.date) : "—"}
+            Зафіксований курс EUR: {formatRate(lockedRate)} · ISO-тиждень{" "}
+            {form.date ? isoWeekFromIsoDate(form.date) : "—"}
           </p>
 
           {preview ? (
             <div className="grid grid-cols-2 gap-2 rounded-lg border bg-muted/40 p-3 text-xs sm:grid-cols-4">
               <div>
-                <div className="text-muted-foreground">Taxable</div>
+                <div className="text-muted-foreground">База</div>
                 <div className="tabular-nums">{formatMoney(preview.taxableBase)}</div>
               </div>
               <div>
-                <div className="text-muted-foreground">Spain 19%</div>
+                <div className="text-muted-foreground">Іспанія 19%</div>
                 <div className="tabular-nums">{formatMoney(preview.spainTax)}</div>
               </div>
               <div>
-                <div className="text-muted-foreground">Company 30%</div>
+                <div className="text-muted-foreground">Фірма 30%</div>
                 <div className="tabular-nums">{formatMoney(preview.companyTax)}</div>
               </div>
               <div>
@@ -315,9 +317,9 @@ export function QuickEntryDialog({
 
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-              Cancel
+              Скасувати
             </Button>
-            <Button type="submit">{editing ? "Save changes" : "Add project"}</Button>
+            <Button type="submit">{editing ? "Зберегти" : "Додати проєкт"}</Button>
           </DialogFooter>
         </form>
       </DialogContent>

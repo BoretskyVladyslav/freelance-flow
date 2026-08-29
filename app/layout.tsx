@@ -18,7 +18,7 @@ const geistMono = localFont({
 
 export const metadata: Metadata = {
   title: "Freelance Flow",
-  description: "Freelance revenue, tax, and multi-currency payout tracker.",
+  description: "CRM для обліку фриланс-доходу, податків і мультивалютних виплат.",
 };
 
 export default function RootLayout({
@@ -27,7 +27,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" suppressHydrationWarning className={cn("font-sans", geistSans.variable)}>
+    <html lang="uk" suppressHydrationWarning className={cn("font-sans", geistSans.variable)}>
       <body className={cn("min-h-screen antialiased", geistMono.variable)}>
         <AppProviders>{children}</AppProviders>
       </body>

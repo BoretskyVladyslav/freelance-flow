@@ -32,11 +32,12 @@ export function Dashboard() {
       <header className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         <div>
           <p className="text-xs font-medium tracking-[0.18em] text-muted-foreground uppercase">
-            Financial CRM
+            Фінансова CRM
           </p>
           <h1 className="text-2xl font-semibold tracking-tight">Freelance Flow</h1>
           <p className="text-sm text-muted-foreground">
-            EUR base · Spain 19% then company 30% · live FX with locked creation rates
+            Базова валюта: EUR · Податок в Іспанії 19%, податок компанії 30% · Курс валют онлайн із
+            фіксацією на дату створення
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
@@ -49,7 +50,7 @@ export function Dashboard() {
             disabled={ratesRefreshing}
           >
             <RefreshCw className={ratesRefreshing ? "animate-spin" : undefined} />
-            Refresh FX
+            Оновити курс
           </Button>
           <BackupControls />
           <Button
@@ -60,14 +61,14 @@ export function Dashboard() {
             }}
           >
             <Plus />
-            Add project
+            Додати проєкт
           </Button>
         </div>
       </header>
 
       <p className="text-xs text-muted-foreground" role="status">
-        FX updated {formatDate(rates.fetchedAt)} · 1 USD = {formatRate(rates.toEur.USD)} EUR
-        {rates.stale ? " · using cached rates" : ""}
+        Курс оновлено {formatDate(rates.fetchedAt)} · 1 USD = {formatRate(rates.toEur.USD)} EUR
+        {rates.stale ? " · використано збережений курс" : ""}
         {ratesError ? ` · ${ratesError}` : ""}
       </p>
 
@@ -76,7 +77,7 @@ export function Dashboard() {
 
       <Card>
         <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <CardTitle>Ledger</CardTitle>
+          <CardTitle>Журнал транзакцій</CardTitle>
           <LedgerFilters />
         </CardHeader>
         <CardContent>

@@ -20,30 +20,30 @@ export function MetricCards() {
   const cards = [
     {
       key: "gross",
-      title: "Total Gross Revenue",
+      title: "Загальний дохід (Gross)",
       value: formatMoney(displayTotals.grossInBase, displayCurrency),
-      description: "Converted to display currency from EUR base.",
+      description: "Конвертовано у вибрану валюту від бази EUR.",
       icon: Wallet,
     },
     {
       key: "spain",
-      title: "Total Spain Tax (19%)",
+      title: "Податок в Іспанії (19%)",
       value: formatMoney(displayTotals.spainTax, displayCurrency),
-      description: "Applied to taxable base after fees.",
+      description: "Нараховується на базу після вирахування комісій.",
       icon: Landmark,
     },
     {
       key: "company",
-      title: "Total Company Tax (30%)",
+      title: "Податок фірми (30%)",
       value: formatMoney(displayTotals.companyTax, displayCurrency),
-      description: "Applied after Spanish tax.",
+      description: "Нараховується на залишок після сплати іспанського податку.",
       icon: Building2,
     },
     {
       key: "net",
-      title: "Total Net Payout",
+      title: "Чистий дохід до виплати (Net)",
       value: formatMoney(displayTotals.netPayout, displayCurrency),
-      description: `Remaining to be paid: ${formatMoney(displayTotals.remainingToBePaid, displayCurrency)}`,
+      description: `Залишилось до виплати: ${formatMoney(displayTotals.remainingToBePaid, displayCurrency)}`,
       icon: Wallet,
     },
   ];
@@ -73,7 +73,7 @@ export function MetricCards() {
       <Card>
         <CardHeader className="gap-2">
           <div className="flex items-center justify-between gap-2">
-            <CardDescription>Currency Gain / Loss</CardDescription>
+            <CardDescription>Курсова різниця (Прибуток / Збиток)</CardDescription>
             {gainNegative ? (
               <TrendingDown className="size-4 text-destructive" />
             ) : (
@@ -90,7 +90,7 @@ export function MetricCards() {
         </CardHeader>
         <CardContent>
           <p className="text-xs text-muted-foreground">
-            Live-rate net versus locked creation-rate net.
+            Різниця між актуальним курсом і курсом на момент створення.
           </p>
         </CardContent>
       </Card>

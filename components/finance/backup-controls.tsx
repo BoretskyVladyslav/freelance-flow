@@ -18,13 +18,13 @@ export function BackupControls() {
         const raw = String(reader.result ?? "");
         if (transactions.length > 0) {
           const confirmed = window.confirm(
-            "Importing a backup replaces all current transactions. Continue?",
+            "Імпорт замінить усі поточні транзакції. Продовжити?",
           );
           if (!confirmed) return;
         }
         importBackup(raw);
       } catch (error) {
-        toast.error(error instanceof Error ? error.message : "Import failed.");
+        toast.error(error instanceof Error ? error.message : "Не вдалося імпортувати файл.");
       }
     };
     reader.readAsText(file);
@@ -44,7 +44,7 @@ export function BackupControls() {
       />
       <Button type="button" variant="outline" size="sm" onClick={exportBackup}>
         <Download />
-        Export
+        Експорт
       </Button>
       <Button
         type="button"
@@ -53,7 +53,7 @@ export function BackupControls() {
         onClick={() => fileRef.current?.click()}
       >
         <Upload />
-        Import
+        Імпорт
       </Button>
     </div>
   );

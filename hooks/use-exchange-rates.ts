@@ -38,7 +38,7 @@ export function useExchangeRates(persistedRates: ExchangeRates | null) {
         const message =
           payload && typeof payload === "object" && "error" in payload
             ? String((payload as { error: unknown }).error)
-            : "Live rates are unavailable.";
+            : "Актуальний курс недоступний.";
         throw new Error(message);
       }
 
@@ -51,7 +51,7 @@ export function useExchangeRates(persistedRates: ExchangeRates | null) {
       return payload;
     } catch (error) {
       const message =
-        error instanceof Error ? error.message : "Live rates are unavailable.";
+        error instanceof Error ? error.message : "Актуальний курс недоступний.";
       setState((current) => ({
         rates: { ...current.rates, stale: true },
         loading: false,

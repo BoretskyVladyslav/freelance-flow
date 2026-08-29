@@ -134,7 +134,7 @@ export function weeklySeries(
     .sort(([a], [b]) => a.localeCompare(b))
     .map(([weekKey, values]) => ({
       weekKey,
-      label: weekKey.replace("-W", " W"),
+      label: weekKey.replace("-W", " Т"),
       gross: convertToDisplay(moneyNumber(values.gross), displayCurrency, rates),
       net: convertToDisplay(moneyNumber(values.net), displayCurrency, rates),
     }));
