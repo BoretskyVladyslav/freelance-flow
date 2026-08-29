@@ -78,25 +78,23 @@ export function MetricCards() {
       className="grid items-stretch gap-4 sm:grid-cols-2 xl:grid-cols-5"
     >
       {cards.map((card) => (
-        <Card key={card.key} className="h-full">
-          <div className="flex h-full flex-col justify-between">
-            <CardHeader className="gap-2">
-              <div className="flex h-10 items-start justify-between gap-2">
-                <CardDescription className="line-clamp-2 leading-5">
-                  {card.title}
-                </CardDescription>
-                <card.icon
-                  className={cn("size-4 shrink-0 text-muted-foreground", card.iconClass)}
-                />
-              </div>
-              <CardTitle className={cn("text-2xl tabular-nums", card.valueClass)}>
-                {hydrated ? card.value : "—"}
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="mt-auto">
-              <p className="min-h-[2.5rem] text-xs text-muted-foreground">{card.description}</p>
-            </CardContent>
-          </div>
+        <Card key={card.key} className="flex h-full flex-col justify-between">
+          <CardHeader className="gap-2">
+            <div className="flex h-10 items-start justify-between gap-2">
+              <CardDescription className="line-clamp-2 leading-5">
+                {card.title}
+              </CardDescription>
+              <card.icon
+                className={cn("size-4 shrink-0 text-muted-foreground", card.iconClass)}
+              />
+            </div>
+            <CardTitle className={cn("text-2xl tabular-nums", card.valueClass)}>
+              {hydrated ? card.value : "—"}
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="mt-auto">
+            <p className="min-h-[2.5rem] text-xs text-muted-foreground">{card.description}</p>
+          </CardContent>
         </Card>
       ))}
     </section>

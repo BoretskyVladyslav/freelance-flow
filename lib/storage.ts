@@ -91,6 +91,45 @@ async function writeValue(key: string, value: unknown): Promise<void> {
   }
 }
 
+function pickRicherArray(primary: unknown, fallback: unknown): unknown[] | undefined {
+  const primaryArr = Array.isArray(primary) ? primary : undefined;
+  const fallbackArr = Array.isArray(fallback) ? fallback : undefined;
+  if (primaryArr && fallbackArr) {
+    return fallbackArr.length > primaryArr.length ? fallbackArr : primaryArr;
+  }
+  return primaryArr ?? fallbackArr;
+}
+
+export function resolveTransactionsToPersist(
+  incoming: Transaction[],
+  existing: unknown,
+): Transaction[] {
+  if (incoming.length > 0) return incoming;
+  if (!Array.isArray(existing) || existing.length === 0) return incoming;
+  const kept = existing.filter(isTransaction);
+  return kept.length > 0 ? kept : incoming;
+}
+
+async function readTransactions(): Promise<unknown> {
+  if (!canUseBrowserStorage()) return undefined;
+
+  const local = readLocal<unknown>(KEYS.transactions);
+  if (!preferLocalStorage && typeof indexedDB !== "undefined") {
+    try {
+      const idb = await get<unknown>(KEYS.transactions);
+      const picked = pickRicherArray(idb, local);
+      if (picked !== undefined && picked !== idb && picked.length > 0) {
+        await set(KEYS.transactions, picked);
+      }
+      return picked ?? idb;
+    } catch {
+      preferLocalStorage = true;
+    }
+  }
+
+  return local;
+}
+
 export type RawFinanceSnapshot = {
   transactions?: unknown;
   lastKnownRates?: unknown;
@@ -125,7 +164,7 @@ export async function loadSnapshot(): Promise<FinanceSnapshot> {
 
   const [transactions, lastKnownRates, displayCurrency, schemaVersion] =
     await Promise.all([
-      readValue<Transaction[]>(KEYS.transactions),
+      readTransactions(),
       readValue<ExchangeRates>(KEYS.rates),
       readValue<Currency>(KEYS.displayCurrency),
       readValue<number>(KEYS.schemaVersion),
@@ -146,8 +185,14 @@ export async function loadSnapshot(): Promise<FinanceSnapshot> {
 }
 
 export async function saveSnapshot(snapshot: FinanceSnapshot): Promise<void> {
+  const existingTransactions = await readTransactions();
+  const transactions = resolveTransactionsToPersist(
+    snapshot.transactions,
+    existingTransactions,
+  );
+
   await Promise.all([
-    writeValue(KEYS.transactions, snapshot.transactions),
+    writeValue(KEYS.transactions, transactions),
     snapshot.lastKnownRates
       ? writeValue(KEYS.rates, snapshot.lastKnownRates)
       : writeValue(KEYS.rates, null),

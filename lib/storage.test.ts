@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { migrateSnapshot } from "@/lib/storage";
+import { migrateSnapshot, resolveTransactionsToPersist } from "@/lib/storage";
 import { BACKUP_SCHEMA_VERSION, type Transaction } from "@/types/finance";
 
 const validTransaction: Transaction = {
@@ -62,5 +62,23 @@ describe("migrateSnapshot", () => {
   it("uses an empty list only when the stored value is missing or not an array", () => {
     expect(migrateSnapshot({ schemaVersion: 3 }).transactions).toEqual([]);
     expect(migrateSnapshot({ schemaVersion: 3, transactions: null }).transactions).toEqual([]);
+  });
+});
+
+describe("resolveTransactionsToPersist", () => {
+  it("refuses to persist an empty array over a non-empty stored ledger", () => {
+    const kept = resolveTransactionsToPersist([], [validTransaction]);
+    expect(kept).toHaveLength(1);
+    expect(kept[0].id).toBe("tx_1");
+  });
+
+  it("allows an empty array when storage is already empty or missing", () => {
+    expect(resolveTransactionsToPersist([], [])).toEqual([]);
+    expect(resolveTransactionsToPersist([], undefined)).toEqual([]);
+  });
+
+  it("writes incoming rows when the new snapshot is non-empty", () => {
+    const next = { ...validTransaction, id: "tx_new" };
+    expect(resolveTransactionsToPersist([next], [validTransaction])).toEqual([next]);
   });
 });

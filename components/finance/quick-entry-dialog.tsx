@@ -73,6 +73,10 @@ const EMPTY_FORM: FormState = {
   notes: "",
 };
 
+const CURRENCY_ITEMS = Object.fromEntries(
+  CURRENCIES.map((currency) => [currency, currency]),
+) as Record<Currency, string>;
+
 type QuickEntryDialogProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -241,10 +245,15 @@ export function QuickEntryDialog({
               </div>
               <Select
                 value={form.platform}
+                items={PLATFORM_LABELS}
                 onValueChange={(value) => value && setField("platform", value as Platform)}
               >
                 <SelectTrigger id="platform" className="w-full">
-                  <SelectValue>{PLATFORM_LABELS[form.platform]}</SelectValue>
+                  <SelectValue>
+                    {(value: Platform | null) =>
+                      value ? PLATFORM_LABELS[value] : PLATFORM_LABELS[form.platform]
+                    }
+                  </SelectValue>
                 </SelectTrigger>
                 <SelectContent alignItemWithTrigger={false}>
                   {PLATFORMS.map((platform) => (
@@ -261,10 +270,15 @@ export function QuickEntryDialog({
               </div>
               <Select
                 value={form.status}
+                items={STATUS_LABELS}
                 onValueChange={(value) => value && setField("status", value as PaymentStatus)}
               >
                 <SelectTrigger id="status" className="w-full">
-                  <SelectValue>{STATUS_LABELS[form.status]}</SelectValue>
+                  <SelectValue>
+                    {(value: PaymentStatus | null) =>
+                      value ? STATUS_LABELS[value] : STATUS_LABELS[form.status]
+                    }
+                  </SelectValue>
                 </SelectTrigger>
                 <SelectContent alignItemWithTrigger={false}>
                   {PAYMENT_STATUSES.map((status) => (
@@ -295,10 +309,13 @@ export function QuickEntryDialog({
               </div>
               <Select
                 value={form.currency}
+                items={CURRENCY_ITEMS}
                 onValueChange={(value) => value && setField("currency", value as Currency)}
               >
                 <SelectTrigger id="currency" className="w-full">
-                  <SelectValue>{form.currency}</SelectValue>
+                  <SelectValue>
+                    {(value: Currency | null) => value ?? form.currency}
+                  </SelectValue>
                 </SelectTrigger>
                 <SelectContent alignItemWithTrigger={false}>
                   {CURRENCIES.map((currency) => (

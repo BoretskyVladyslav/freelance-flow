@@ -18,3 +18,13 @@ export const STATUS_DESCRIPTIONS: Record<PaymentStatus, string> = {
   Pending: "Проєкт завершено, виплата очікується.",
   Paid: "Виплату отримано.",
 };
+
+export const PLATFORM_FILTER_ITEMS = {
+  all: "Всі платформи",
+  ...PLATFORM_LABELS,
+} as const;
+
+export const STATUS_FILTER_ITEMS = {
+  all: "Всі статуси",
+  ...STATUS_LABELS,
+} as const;
