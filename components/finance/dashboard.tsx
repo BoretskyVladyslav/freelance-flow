@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Plus, RefreshCw } from "lucide-react";
 import { LogoutButton } from "@/components/auth/logout-button";
+import { CloudMigrationBanner } from "@/components/finance/cloud-migration-banner";
 import { BackupControls } from "@/components/finance/backup-controls";
 import { CurrencySwitcher } from "@/components/finance/currency-switcher";
 import { useFinance } from "@/components/finance/finance-provider";
@@ -74,6 +75,8 @@ export function Dashboard() {
           </Button>
         </div>
       </header>
+
+      <CloudMigrationBanner />
 
       <p className="text-xs text-muted-foreground print:hidden" role="status">
         Курс оновлено {formatDate(rates.fetchedAt)} · 1 USD = {formatRate(uahPerUnit("USD", rates))}{" "}

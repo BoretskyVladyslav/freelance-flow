@@ -14,6 +14,13 @@ import {
 } from "@/types/finance";
 import type { Database } from "@/types/database";
 
+const UUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+export function ensureProjectUuid(id: string): string {
+  return UUID_RE.test(id) ? id : crypto.randomUUID();
+}
+
 type ProjectRow = Database["public"]["Tables"]["projects"]["Row"];
 type ProjectInsert = Database["public"]["Tables"]["projects"]["Insert"];
 
@@ -48,7 +55,7 @@ function rowToTransaction(row: ProjectRow): Transaction | null {
   };
 }
 
-function transactionToRow(transaction: Transaction, userId: string): ProjectInsert {
+export function transactionToRow(transaction: Transaction, userId: string): ProjectInsert {
   return {
     id: transaction.id,
     employee_id: transaction.employeeId || userId,

@@ -58,6 +58,7 @@ type FinanceContextValue = {
   deleteTransaction: (id: string) => void;
   exportBackup: () => void;
   importBackup: (raw: string) => void;
+  reloadProjects: () => Promise<void>;
 };
 
 const FinanceContext = createContext<FinanceContextValue | null>(null);
@@ -194,6 +195,13 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     toast.success("Резервну копію експортовано.");
   }, [snapshot]);
 
+  const reloadProjects = useCallback(async () => {
+    const loaded = await projectsRepository.load();
+    setSnapshot(loaded);
+    setPersistEnabled(true);
+    setHydrated(true);
+  }, []);
+
   const importBackup = useCallback((raw: string) => {
     const imported = projectsRepository.parseBackup(raw);
     setSnapshot(imported);
@@ -223,6 +231,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
       deleteTransaction,
       exportBackup,
       importBackup,
+      reloadProjects,
     }),
     [
       addTransaction,
@@ -238,6 +247,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
       filters,
       hydrated,
       importBackup,
+      reloadProjects,
       setDisplayCurrency,
       snapshot.displayCurrency,
       snapshot.transactions,

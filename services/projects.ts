@@ -9,6 +9,13 @@ import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { supabaseProjectsRepository } from "@/services/supabase-projects";
 
 export type { FinanceSnapshot } from "@/lib/storage";
+export {
+  countLegacyLocalProjects,
+  migrateLocalToSupabase,
+  hasCompletedCloudMigration,
+  markCloudMigrationDone,
+} from "@/services/migrate-local";
+export type { LocalMigrationResult } from "@/services/migrate-local";
 
 export interface ProjectsRepository {
   load(): Promise<FinanceSnapshot>;
