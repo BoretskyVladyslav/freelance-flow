@@ -1,0 +1,27 @@
+---
+description: Enforce two-decimal financial rounding and tax sequence consistency
+alwaysApply: true
+---
+
+# Financial precision
+
+- Money math lives in `lib/tax-calculator.ts`. UI, charts, and storage must call it — never reimplement tax steps inline.
+- Use `decimal.js` with `ROUND_HALF_UP`. Round **every intermediate amount** to 2 decimal places before the next step.
+- Do **not** round FX rates to 2 decimals. Store `toEur` / `exchangeRateAtCreation` at up to 8 decimal places; EUR is always `1`.
+- Historical payouts lock `exchangeRateAtCreation`. Live gain/loss reruns the same sequence with the current `toEur` rate.
+- Display currency converts EUR totals only. Never change stored original amounts or recalculate tax in the display currency.
+
+```ts
+// ❌ BAD — float drift, skipped rounding
+const spainTax = (gross * rate - fee * rate) * 0.19;
+
+// ✅ GOOD
+const grossInBase = roundMoney(gross.times(rate));
+const feeInBase = roundMoney(fee.times(rate));
+const taxableBase = roundMoney(grossInBase.minus(feeInBase));
+const spainTax = roundMoney(taxableBase.times("0.19"));
+```
+
+Sequence: grossInBase → feeInBase → taxableBase → spainTax (19%) → postSpainBase → companyTax (30%) → netPayout.
+
+Any change to tax, rounding, FX conversion, or backup parsing requires tests in `lib/tax-calculator.test.ts` and `types/finance.test.ts`.

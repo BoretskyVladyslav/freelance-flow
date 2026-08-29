@@ -1,0 +1,47 @@
+import { BASE_CURRENCY, type Currency } from "@/types/finance";
+
+const FORMATTERS = new Map<string, Intl.NumberFormat>();
+
+function formatter(currency: Currency): Intl.NumberFormat {
+  const cached = FORMATTERS.get(currency);
+  if (cached) return cached;
+  const next = new Intl.NumberFormat("en-IE", {
+    style: "currency",
+    currency,
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+  FORMATTERS.set(currency, next);
+  return next;
+}
+
+export function formatMoney(amount: number, currency: Currency = BASE_CURRENCY): string {
+  return formatter(currency).format(amount);
+}
+
+export function formatSignedMoney(
+  amount: number,
+  currency: Currency = BASE_CURRENCY,
+): string {
+  const abs = formatMoney(Math.abs(amount), currency);
+  if (amount > 0) return `+${abs}`;
+  if (amount < 0) return `-${abs}`;
+  return abs;
+}
+
+export function formatRate(rate: number): string {
+  return new Intl.NumberFormat("en-IE", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 6,
+  }).format(rate);
+}
+
+export function formatDate(isoDate: string): string {
+  const date = new Date(isoDate);
+  if (Number.isNaN(date.getTime())) return isoDate;
+  return new Intl.DateTimeFormat("en-GB", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  }).format(date);
+}
