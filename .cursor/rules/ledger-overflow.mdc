@@ -1,0 +1,22 @@
+---
+description: Keep table overlays and truncated cells usable in overflow wrappers
+globs: components/finance/ledger-table.tsx
+alwaysApply: false
+---
+
+# Ledger overlays
+
+- Action menus must portal to `document.body`. Never rely on in-cell popups inside `overflow-x-auto`.
+- Do not size menu popups with `w-(--anchor-width)` for icon triggers — use `w-max min-w-44`.
+- Long titles truncate with `max-w-[200px] sm:max-w-[300px] truncate`. Full text lives in a Tooltip/`title`.
+- Tax column stays a compact Badge. Amounts belong in a hover tooltip, not extra row height.
+
+```tsx
+// ❌ BAD — clipped by the table scroller, 32px wide
+<DropdownMenuContent className="w-(--anchor-width)" />
+
+// ✅ GOOD
+<DropdownMenuPortal>
+  <DropdownMenuContent className="z-[200] w-max min-w-44" />
+</DropdownMenuPortal>
+```

@@ -77,12 +77,12 @@ export function Dashboard() {
       <MetricCards />
       <WeeklyChart />
 
-      <Card>
+      <Card className="overflow-visible">
         <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <CardTitle>Журнал транзакцій</CardTitle>
           <LedgerFilters />
         </CardHeader>
-        <CardContent>
+        <CardContent className="overflow-visible">
           <LedgerTable
             onEdit={(transaction) => {
               setEditing(transaction);

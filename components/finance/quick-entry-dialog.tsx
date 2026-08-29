@@ -222,7 +222,7 @@ export function QuickEntryDialog({
             </DialogDescription>
           </DialogHeader>
 
-          <div className="grid items-start gap-3 sm:grid-cols-2">
+          <div className="grid grid-cols-1 items-start gap-4 sm:grid-cols-2">
             <div className="grid gap-1.5 sm:col-span-2">
               <Label htmlFor="title">Назва проєкту</Label>
               <Input
@@ -233,7 +233,7 @@ export function QuickEntryDialog({
                 placeholder="Лендінг для клієнта"
               />
             </div>
-            <div className="flex flex-col gap-1.5">
+            <div className="grid gap-1.5">
               <Label htmlFor="platform">Платформа</Label>
               <Select
                 value={form.platform}
@@ -250,11 +250,8 @@ export function QuickEntryDialog({
                   ))}
                 </SelectContent>
               </Select>
-              <p className="min-h-8 text-xs text-transparent" aria-hidden="true">
-                Поле вирівнювання
-              </p>
             </div>
-            <div className="flex flex-col gap-1.5">
+            <div className="grid gap-1.5">
               <Label htmlFor="status">Статус</Label>
               <Select
                 value={form.status}
@@ -271,7 +268,7 @@ export function QuickEntryDialog({
                   ))}
                 </SelectContent>
               </Select>
-              <p className="min-h-8 text-xs text-muted-foreground">
+              <p className="mt-1 text-xs text-muted-foreground">
                 {STATUS_DESCRIPTIONS[form.status]}
               </p>
             </div>
