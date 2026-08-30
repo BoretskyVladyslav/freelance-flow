@@ -215,11 +215,12 @@ export function QuickEntryDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
-        className="max-h-[calc(100dvh-1rem)] overflow-y-auto sm:max-w-2xl"
+        className="flex max-h-[90vh] flex-col gap-0 overflow-hidden p-0 md:max-w-2xl"
         showCloseButton
       >
-        <form onSubmit={onSubmit} className="grid gap-4">
-          <DialogHeader>
+        <form onSubmit={onSubmit} className="flex min-h-0 flex-1 flex-col">
+          <div className="min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain p-4 pb-2">
+          <DialogHeader className="pr-8">
             <DialogTitle>{editing ? "Редагувати проєкт" : "Швидке додавання"}</DialogTitle>
             <DialogDescription>
               Суми зберігаються в оригінальній валюті. Курс до EUR фіксується на дату створення.
@@ -233,7 +234,6 @@ export function QuickEntryDialog({
               </div>
               <Input
                 id="title"
-                autoFocus
                 value={form.title}
                 onChange={(event) => setField("title", event.target.value)}
                 placeholder="Лендінг для клієнта"
@@ -438,8 +438,9 @@ export function QuickEntryDialog({
               </div>
             </div>
           ) : null}
+          </div>
 
-          <DialogFooter>
+          <DialogFooter className="mx-0 mb-0 shrink-0 pb-[max(1rem,env(safe-area-inset-bottom))]">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               Скасувати
             </Button>

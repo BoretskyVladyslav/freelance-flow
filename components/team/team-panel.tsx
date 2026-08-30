@@ -181,7 +181,7 @@ export function TeamPanel() {
           if (!next) setForm(EMPTY_FORM);
         }}
       >
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="md:max-w-md">
           <form onSubmit={(event) => void onCreate(event)} className="grid gap-4">
             <DialogHeader>
               <DialogTitle>Додати працівника</DialogTitle>

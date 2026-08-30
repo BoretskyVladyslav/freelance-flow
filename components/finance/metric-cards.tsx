@@ -16,7 +16,6 @@ import { cn } from "@/lib/utils";
 export function MetricCards() {
   const { displayTotals, displayCurrency, hydrated, isAdmin, teamScope } = useFinance();
   const gain = displayTotals.currencyGainLoss;
-  const gainPositive = gain > 0;
   const gainNegative = gain < 0;
 
   const cards: Array<{
@@ -65,17 +64,13 @@ export function MetricCards() {
     },
     {
       key: "fx",
-      title: "Курсова різниця (Прибуток / Збиток)",
+      title: "Курсова різниця",
       value: formatSignedMoney(gain, displayCurrency),
       description: "Різниця між актуальним курсом і курсом на момент створення.",
       icon: gainNegative ? TrendingDown : TrendingUp,
-      iconClass: gainNegative ? "text-destructive" : "text-muted-foreground",
-      valueClass: gainPositive
-        ? "text-emerald-600 dark:text-emerald-400"
-        : gainNegative
-          ? "text-destructive"
-          : "",
-      span: "col-span-2 xl:col-span-1",
+      iconClass: "text-muted-foreground",
+      valueClass: "text-muted-foreground",
+      span: "col-span-2 bg-muted/50 xl:col-span-1 xl:bg-transparent",
     },
   ];
 
@@ -104,7 +99,7 @@ export function MetricCards() {
             </div>
             <CardTitle
               className={cn(
-                "text-4xl leading-none font-semibold tabular-nums break-all print:text-2xl md:text-2xl",
+                "truncate whitespace-nowrap text-2xl font-bold leading-none tabular-nums sm:text-3xl print:text-2xl md:text-2xl",
                 card.valueClass,
               )}
             >

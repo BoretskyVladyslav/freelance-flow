@@ -59,10 +59,9 @@ const PLATFORM_VARIANT: Record<Platform, "default" | "secondary" | "outline" | "
 
 const STATUS_CLASS: Record<PaymentStatus, string> = {
   "In Progress":
-    "border-transparent bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-200",
-  Pending:
-    "border-transparent bg-amber-100 text-amber-800 dark:bg-amber-900/50 dark:text-amber-200",
-  Paid: "border-transparent bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-200",
+    "border-transparent bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300",
+  Paid: "border-transparent bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300",
+  Pending: "border-transparent bg-slate-100 text-slate-800 dark:bg-slate-800 dark:text-slate-300",
 };
 
 type LedgerTableProps = {
@@ -190,7 +189,7 @@ export function LedgerTable({ onEdit }: LedgerTableProps) {
           return (
             <div
               key={row.id}
-              className="relative rounded-xl bg-card p-3 ring-1 ring-foreground/10"
+              className="relative rounded-xl border border-slate-200/80 bg-card p-3.5 shadow-sm dark:border-slate-800"
             >
               <div className="mb-3 flex items-start gap-2 pr-8">
                 <p className="min-w-0 flex-1 truncate font-medium">{row.title}</p>
@@ -212,7 +211,7 @@ export function LedgerTable({ onEdit }: LedgerTableProps) {
                   <p className="text-xs text-muted-foreground">Т{row.weekNumber}</p>
                 </div>
                 <div className="min-w-0">
-                  <p className="text-[11px] text-muted-foreground">Gross</p>
+                  <p className="text-[11px] text-muted-foreground">Валовий:</p>
                   <p className="tabular-nums">{formatMoney(row.grossAmount, row.currency)}</p>
                 </div>
                 <div className="min-w-0">
@@ -222,8 +221,8 @@ export function LedgerTable({ onEdit }: LedgerTableProps) {
                   </Badge>
                 </div>
                 <div className="min-w-0">
-                  <p className="text-[11px] text-muted-foreground">Net</p>
-                  <p className="tabular-nums font-semibold text-green-600 dark:text-green-400">
+                  <p className="text-[11px] text-muted-foreground">До виплати:</p>
+                  <p className="tabular-nums font-bold text-green-600 dark:text-green-400">
                     {net}
                   </p>
                 </div>
