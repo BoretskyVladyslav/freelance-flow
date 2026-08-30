@@ -11,6 +11,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useFinance } from "@/components/finance/finance-provider";
+import { downloadPdfReport } from "@/lib/pdf-report";
 import { cn } from "@/lib/utils";
 
 function useBackupFile() {
@@ -74,6 +75,27 @@ export function BackupControls() {
 
 export function MoreToolsDropdown() {
   const { fileRef, exportBackup, onFile } = useBackupFile();
+  const { filteredViews, displayTotals, displayCurrency, rates, filters, hydrated } =
+    useFinance();
+
+  async function onPdf() {
+    if (!hydrated) {
+      toast.error("Дані ще завантажуються.");
+      return;
+    }
+    try {
+      const fileName = await downloadPdfReport({
+        views: filteredViews,
+        totals: displayTotals,
+        displayCurrency,
+        rates,
+        filters,
+      });
+      toast.success(`Завантажено ${fileName}`);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Не вдалося сформувати PDF.");
+    }
+  }
 
   return (
     <>
@@ -87,17 +109,23 @@ export function MoreToolsDropdown() {
           event.target.value = "";
         }}
       />
-      <DropdownMenu modal={false}>
+      <DropdownMenu>
         <DropdownMenuTrigger
           type="button"
           nativeButton
           aria-label="Звіт, експорт і імпорт"
-          className={cn(buttonVariants({ variant: "outline", size: "sm" }), "h-8 w-8 p-0")}
+          className={cn(
+            buttonVariants({ variant: "outline", size: "sm" }),
+            "h-11 w-11 pointer-events-auto cursor-pointer p-0 md:h-8 md:w-8",
+          )}
         >
           <MoreHorizontal className="size-4" />
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
-          <DropdownMenuItem onClick={() => window.print()}>
+          <DropdownMenuItem
+            className="min-h-11 cursor-pointer"
+            onClick={() => void onPdf()}
+          >
             <FileText className="size-4" />
             Звіт у PDF
           </DropdownMenuItem>

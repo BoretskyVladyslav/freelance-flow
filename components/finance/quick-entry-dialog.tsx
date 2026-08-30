@@ -215,7 +215,7 @@ export function QuickEntryDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
-        className="flex max-h-[90vh] flex-col gap-0 overflow-hidden p-0 md:max-w-2xl"
+        className="flex h-dvh max-h-dvh flex-col gap-0 overflow-hidden p-0 md:h-auto md:max-h-[min(90vh,calc(100dvh-2rem))] md:max-w-2xl"
         showCloseButton
       >
         <form onSubmit={onSubmit} className="flex min-h-0 flex-1 flex-col">

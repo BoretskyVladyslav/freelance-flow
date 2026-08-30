@@ -13,6 +13,8 @@ import { toast } from "sonner";
 import { useExchangeRates } from "@/hooks/use-exchange-rates";
 import {
   applyFilters,
+  summarize,
+  toDisplayTotals,
   type DashboardTotals,
   type TransactionView,
   type WeeklyPoint,
@@ -199,8 +201,13 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
       ),
     [exchange.rates, scopedTransactions, snapshot.displayCurrency],
   );
-  const { views, totals, displayTotals, weekly } = overview;
-  const filteredViews = useMemo(() => applyFilters(views, filters), [views, filters]);
+  const { views, weekly } = overview;
+  const filteredViews = useMemo(() => applyFilters(views, filters), [filters, views]);
+  const totals = useMemo(() => summarize(filteredViews), [filteredViews]);
+  const displayTotals = useMemo(
+    () => toDisplayTotals(totals, snapshot.displayCurrency, exchange.rates),
+    [exchange.rates, snapshot.displayCurrency, totals],
+  );
 
   const addTransaction = useCallback(
     (

@@ -72,7 +72,7 @@ export function Dashboard() {
                 variant="outline"
                 size="sm"
                 aria-label="Оновити курс"
-                className="h-8 w-8 p-0"
+                className="h-11 w-11 p-0 md:h-8 md:w-8"
                 onClick={() => void refreshRates()}
                 disabled={ratesRefreshing}
               >
@@ -83,7 +83,7 @@ export function Dashboard() {
           </div>
           <div className="flex items-center justify-between gap-2">
             <MoreToolsDropdown />
-            <Button type="button" onClick={openNewProject} className="h-8 px-2.5">
+            <Button type="button" onClick={openNewProject} className="h-11 px-3 md:h-8 md:px-2.5">
               <Plus />
               <span className="hidden min-[380px]:inline">Додати проєкт</span>
               <span className="sr-only min-[380px]:hidden">Додати проєкт</span>
@@ -132,12 +132,12 @@ export function Dashboard() {
       <MetricCards />
       <WeeklyChart />
 
-      <Card className="min-w-0 overflow-x-hidden overflow-y-visible">
+      <Card className="min-w-0 overflow-visible">
         <CardHeader className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
           <CardTitle>Журнал транзакцій</CardTitle>
           <LedgerFilters />
         </CardHeader>
-        <CardContent className="overflow-x-hidden overflow-y-visible">
+        <CardContent className="overflow-visible">
           <LedgerTable
             onEdit={(project) => {
               setSelectedProject(project);

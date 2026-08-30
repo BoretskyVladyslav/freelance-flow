@@ -18,9 +18,7 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuSub,
-  DropdownMenuSubContent,
-  DropdownMenuSubTrigger,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
@@ -82,11 +80,14 @@ function RowActions({
   const [open, setOpen] = useState(false);
 
   return (
-    <DropdownMenu open={open} onOpenChange={setOpen} modal={false}>
+    <DropdownMenu open={open} onOpenChange={setOpen}>
       <DropdownMenuTrigger
         type="button"
         nativeButton
-        className={cn(buttonVariants({ variant: "ghost" }), "relative z-[1] h-8 w-8 p-0")}
+        className={cn(
+          buttonVariants({ variant: "ghost" }),
+          "relative z-[1] h-11 w-11 pointer-events-auto cursor-pointer p-0 md:h-8 md:w-8",
+        )}
         onPointerDown={(event) => event.stopPropagation()}
         onMouseDown={(event) => event.stopPropagation()}
         onClick={(event) => event.stopPropagation()}
@@ -95,7 +96,7 @@ function RowActions({
         <MoreHorizontal className="size-4" />
         <span className="sr-only">Відкрити дії</span>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" side="bottom" className="z-[9999]">
+      <DropdownMenuContent align="end" side="bottom" className="z-[10050]">
         <DropdownMenuItem
           onClick={() => {
             setOpen(false);
@@ -104,23 +105,20 @@ function RowActions({
         >
           Редагувати
         </DropdownMenuItem>
-        <DropdownMenuSub>
-          <DropdownMenuSubTrigger>Змінити статус</DropdownMenuSubTrigger>
-          <DropdownMenuSubContent className="z-[9999]">
-            {PAYMENT_STATUSES.map((status) => (
-              <DropdownMenuItem
-                key={status}
-                disabled={row.status === status}
-                onClick={() => {
-                  updateTransaction(row.id, { status });
-                  setOpen(false);
-                }}
-              >
-                {STATUS_LABELS[status]}
-              </DropdownMenuItem>
-            ))}
-          </DropdownMenuSubContent>
-        </DropdownMenuSub>
+        <DropdownMenuSeparator />
+        {PAYMENT_STATUSES.map((status) => (
+          <DropdownMenuItem
+            key={status}
+            disabled={row.status === status}
+            onClick={() => {
+              updateTransaction(row.id, { status });
+              setOpen(false);
+            }}
+          >
+            {STATUS_LABELS[status]}
+          </DropdownMenuItem>
+        ))}
+        <DropdownMenuSeparator />
         <DropdownMenuItem
           variant="destructive"
           onClick={() => {
@@ -181,24 +179,29 @@ export function LedgerTable({ onEdit }: LedgerTableProps) {
 
   return (
     <>
-      <div className="grid grid-cols-1 gap-4 md:hidden print:hidden">
+      <div className="grid grid-cols-1 gap-3 md:hidden">
         {filteredViews.map((row) => {
           const net = formatMoney(
             convertToDisplay(row.breakdown.netPayout, displayCurrency, rates),
             displayCurrency,
           );
           return (
-            <div
+            <article
               key={row.id}
-              className="relative rounded-xl border border-slate-200/80 bg-card p-3.5 shadow-sm dark:border-slate-800"
+              className="relative rounded-xl border border-slate-200/80 bg-card p-4 pr-14 shadow-sm dark:border-slate-800"
             >
-              <div className="mb-3 flex items-start gap-2 pr-8">
-                <p className="min-w-0 flex-1 truncate font-medium">{row.title}</p>
-                <Badge variant="outline" className={cn("max-w-[40%] shrink-0 truncate", PLATFORM_BADGE_CLASS[row.platform])}>
+              <div className="mb-3 flex items-start gap-2">
+                <p className="min-w-0 flex-1 text-base font-semibold leading-snug">
+                  {row.title}
+                </p>
+                <Badge
+                  variant="outline"
+                  className={cn("max-w-[42%] shrink-0 truncate", PLATFORM_BADGE_CLASS[row.platform])}
+                >
                   {PLATFORM_LABELS[row.platform]}
                 </Badge>
               </div>
-              <div className="absolute top-2 right-2 print:hidden">
+              <div className="absolute top-2 right-2">
                 <RowActions
                   row={row}
                   onEdit={onEdit}
@@ -208,13 +211,13 @@ export function LedgerTable({ onEdit }: LedgerTableProps) {
               <div className="grid grid-cols-2 gap-3 text-sm">
                 <div className="min-w-0">
                   <p className="text-[11px] text-muted-foreground">Дата / Тиждень</p>
-                  <p className="font-medium">
+                  <p className="font-medium whitespace-nowrap">
                     <FormattedDate value={getTransactionStartDate(row)} />
                   </p>
                   <p className="text-xs text-muted-foreground">Т{row.weekNumber}</p>
                 </div>
                 <div className="min-w-0">
-                  <p className="text-[11px] text-muted-foreground">Валовий:</p>
+                  <p className="text-[11px] text-muted-foreground">Gross</p>
                   <p className="tabular-nums">{formatMoney(row.grossAmount, row.currency)}</p>
                 </div>
                 <div className="min-w-0">
@@ -224,17 +227,17 @@ export function LedgerTable({ onEdit }: LedgerTableProps) {
                   </Badge>
                 </div>
                 <div className="min-w-0">
-                  <p className="text-[11px] text-muted-foreground">До виплати:</p>
-                  <p className="tabular-nums font-bold text-emerald-600 dark:text-emerald-400">
+                  <p className="text-[11px] text-muted-foreground">Net</p>
+                  <p className="tabular-nums text-base font-bold text-emerald-600 dark:text-emerald-400">
                     {net}
                   </p>
                 </div>
               </div>
-            </div>
+            </article>
           );
         })}
       </div>
-      <div className="hidden md:block print:block">
+      <div className="hidden md:block">
       <Table containerClassName="overflow-x-auto" className="w-full border-collapse">
         <TableHeader>
           <TableRow>
@@ -247,7 +250,7 @@ export function LedgerTable({ onEdit }: LedgerTableProps) {
             <TableHead className="hidden w-[12%] md:table-cell">Податки</TableHead>
             <TableHead className="w-[12%]">Net до отримання</TableHead>
             <TableHead className="w-[8%]">Статус</TableHead>
-            <TableHead className="w-10 print:hidden">
+            <TableHead className="w-10">
               <span className="sr-only">Дії</span>
             </TableHead>
           </TableRow>
@@ -308,7 +311,7 @@ export function LedgerTable({ onEdit }: LedgerTableProps) {
                   {STATUS_LABELS[row.status]}
                 </Badge>
               </TableCell>
-              <TableCell className="w-10 print:hidden">
+              <TableCell className="w-10">
                 <RowActions
                   row={row}
                   onEdit={onEdit}

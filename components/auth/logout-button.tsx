@@ -29,7 +29,7 @@ export function LogoutButton({ compact = false }: LogoutButtonProps) {
       variant="outline"
       size="sm"
       aria-label="Вийти"
-      className={compact ? "h-8 w-8 p-0" : undefined}
+      className={compact ? "h-11 w-11 p-0 md:h-8 md:w-8" : undefined}
       onClick={() => void onLogout()}
     >
       <LogOut />
