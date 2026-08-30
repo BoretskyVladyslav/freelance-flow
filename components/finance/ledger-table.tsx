@@ -50,11 +50,11 @@ import {
 } from "@/types/finance";
 import type { TransactionView } from "@/lib/aggregates";
 
-const PLATFORM_VARIANT: Record<Platform, "default" | "secondary" | "outline" | "ghost"> = {
-  Freelancehunt: "default",
-  "Freelance BG": "secondary",
-  "Direct Client": "outline",
-  Other: "ghost",
+const PLATFORM_BADGE_CLASS: Record<Platform, string> = {
+  Freelancehunt: "border bg-sky-100 text-sky-800 border-sky-200",
+  "Freelance BG": "border bg-purple-100 text-purple-800 border-purple-200",
+  "Direct Client": "border bg-slate-100 text-slate-800 border-slate-200",
+  Other: "border bg-slate-100 text-slate-800 border-slate-200",
 };
 
 const STATUS_CLASS: Record<PaymentStatus, string> = {
@@ -152,7 +152,7 @@ function TaxDetails({ row }: { row: TransactionView }) {
     <Tooltip>
       <TooltipTrigger
         render={
-          <span className="cursor-help tabular-nums text-destructive dark:text-red-400" />
+          <span className="cursor-help tabular-nums text-rose-600 dark:text-rose-400" />
         }
       >
         {formatSignedMoney(-totalTaxDisplay, displayCurrency)}
@@ -193,7 +193,7 @@ export function LedgerTable({ onEdit }: LedgerTableProps) {
             >
               <div className="mb-3 flex items-start gap-2 pr-8">
                 <p className="min-w-0 flex-1 truncate font-medium">{row.title}</p>
-                <Badge variant={PLATFORM_VARIANT[row.platform]} className="max-w-[40%] shrink-0 truncate">
+                <Badge variant="outline" className={cn("max-w-[40%] shrink-0 truncate", PLATFORM_BADGE_CLASS[row.platform])}>
                   {PLATFORM_LABELS[row.platform]}
                 </Badge>
               </div>
@@ -222,7 +222,7 @@ export function LedgerTable({ onEdit }: LedgerTableProps) {
                 </div>
                 <div className="min-w-0">
                   <p className="text-[11px] text-muted-foreground">До виплати:</p>
-                  <p className="tabular-nums font-bold text-green-600 dark:text-green-400">
+                  <p className="tabular-nums font-bold text-emerald-600 dark:text-emerald-400">
                     {net}
                   </p>
                 </div>
@@ -235,8 +235,8 @@ export function LedgerTable({ onEdit }: LedgerTableProps) {
       <Table containerClassName="overflow-x-hidden" className="w-full table-fixed">
         <TableHeader>
           <TableRow>
-            <TableHead className="w-[14%]">Дата / Тиждень</TableHead>
-            <TableHead className="w-[30%]">Проєкт</TableHead>
+            <TableHead className="w-32 min-w-[128px] whitespace-nowrap">Дата / Тиждень</TableHead>
+            <TableHead className="max-w-xs">Проєкт</TableHead>
             <TableHead className="hidden w-[10%] sm:table-cell">Платформа</TableHead>
             <TableHead className="w-[12%]">Gross (оригінал)</TableHead>
             <TableHead className="hidden w-[12%] md:table-cell">Податки</TableHead>
@@ -250,7 +250,7 @@ export function LedgerTable({ onEdit }: LedgerTableProps) {
         <TableBody>
           {filteredViews.map((row) => (
             <TableRow key={row.id}>
-              <TableCell className="w-[14%] whitespace-normal">
+              <TableCell className="w-32 min-w-[128px] whitespace-nowrap">
                 <div className="font-medium">
                   {formatDate(getTransactionStartDate(row))}
                   {row.endDate ? ` — ${formatDate(row.endDate)}` : ""}
@@ -262,7 +262,7 @@ export function LedgerTable({ onEdit }: LedgerTableProps) {
                   </div>
                 ) : null}
               </TableCell>
-              <TableCell className="w-[30%] max-w-0 overflow-hidden">
+              <TableCell className="max-w-xs overflow-hidden">
                 <Tooltip>
                   <TooltipTrigger
                     title={row.title}
@@ -277,7 +277,7 @@ export function LedgerTable({ onEdit }: LedgerTableProps) {
                 ) : null}
               </TableCell>
               <TableCell className="hidden w-[10%] overflow-hidden sm:table-cell">
-                <Badge variant={PLATFORM_VARIANT[row.platform]} className="max-w-full truncate">
+                <Badge variant="outline" className={cn("max-w-full truncate", PLATFORM_BADGE_CLASS[row.platform])}>
                   {PLATFORM_LABELS[row.platform]}
                 </Badge>
               </TableCell>
@@ -287,7 +287,7 @@ export function LedgerTable({ onEdit }: LedgerTableProps) {
               <TableCell className="hidden w-[12%] md:table-cell">
                 <TaxDetails row={row} />
               </TableCell>
-              <TableCell className="w-[12%] tabular-nums font-medium text-green-600 dark:text-green-400">
+              <TableCell className="w-[12%] tabular-nums font-medium text-emerald-600 dark:text-emerald-400">
                 {formatMoney(
                   convertToDisplay(row.breakdown.netPayout, displayCurrency, rates),
                   displayCurrency,

@@ -46,9 +46,14 @@ export function WeeklyChart() {
                 <CartesianGrid strokeDasharray="3 3" vertical={false} />
                 <XAxis dataKey="label" tickLine={false} axisLine={false} tick={{ fontSize: 11 }} />
                 <YAxis
+                  allowDuplicatedCategory={false}
+                  allowDecimals={false}
+                  tickCount={4}
+                  minTickGap={16}
+                  interval="preserveStartEnd"
                   tickLine={false}
                   axisLine={false}
-                  width={48}
+                  width={56}
                   tick={{ fontSize: 11 }}
                   tickFormatter={(value: number) =>
                     formatCompactMoney(value, displayCurrency)
@@ -60,8 +65,8 @@ export function WeeklyChart() {
                   }
                 />
                 <Legend />
-                <Bar dataKey="gross" name="Gross" fill="#3b6cb5" radius={[4, 4, 0, 0]} />
-                <Bar dataKey="net" name="Net" fill="#2a9d8f" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="gross" name="Gross" fill="#1E3A8A" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="net" name="Net" fill="#10B981" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           ) : (

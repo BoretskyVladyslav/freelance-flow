@@ -23,7 +23,7 @@ export function CurrencySwitcher({ value, onChange }: CurrencySwitcherProps) {
           size="sm"
           variant="ghost"
           aria-pressed={value === currency}
-          className={cn("h-7 px-3", value === currency && "bg-primary text-primary-foreground")}
+          className={cn("h-7 px-3", value === currency && "bg-blue-900 text-white")}
           onClick={() => onChange(currency)}
         >
           {currency}

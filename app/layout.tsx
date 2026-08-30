@@ -17,8 +17,12 @@ const geistMono = localFont({
 });
 
 export const metadata: Metadata = {
-  title: "Freelance Flow",
-  description: "CRM для обліку фриланс-доходу, податків і мультивалютних виплат.",
+  title: "Freelance Flow | Фінансова CRM",
+  description: "Закрита CRM-система фінансового обліку та аналітики виплат",
+  icons: {
+    icon: "/favicon.svg",
+    apple: "/favicon.svg",
+  },
 };
 
 export const viewport: Viewport = {

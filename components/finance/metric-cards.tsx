@@ -52,7 +52,7 @@ export function MetricCards() {
         ? "Агрегація по компанії. Нараховується на залишок після сплати іспанського податку."
         : "Нараховується на залишок після сплати іспанського податку.",
       icon: Building2,
-      valueClass: "text-red-600/80 dark:text-red-400",
+      valueClass: "text-rose-600 dark:text-rose-400",
     },
     {
       key: "net",
@@ -60,7 +60,7 @@ export function MetricCards() {
       value: formatMoney(displayTotals.netPayout, displayCurrency),
       description: `Залишилось до виплати: ${formatMoney(displayTotals.remainingToBePaid, displayCurrency)}`,
       icon: Wallet,
-      valueClass: "text-green-600 dark:text-green-400",
+      valueClass: "text-emerald-600 dark:text-emerald-400",
     },
     {
       key: "fx",

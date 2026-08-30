@@ -43,10 +43,12 @@ export function Dashboard() {
     <main className="mx-auto flex min-h-screen w-full min-w-0 max-w-7xl flex-col gap-4 overflow-x-hidden px-4 py-4 sm:gap-6 sm:py-6 md:px-6 lg:px-8">
       <header className="flex min-w-0 flex-col gap-3 md:gap-4 lg:flex-row lg:items-center lg:justify-between">
         <div className="min-w-0">
-          <p className="text-xs font-medium tracking-[0.18em] text-muted-foreground uppercase print:hidden">
+          <p className="text-xs font-medium tracking-[0.18em] text-blue-900 uppercase print:hidden dark:text-blue-300">
             Фінансова CRM
           </p>
-          <h1 className="text-xl font-semibold tracking-tight sm:text-2xl">Freelance Flow</h1>
+          <h1 className="text-xl font-semibold tracking-tight text-blue-900 sm:text-2xl dark:text-blue-100">
+            Freelance Flow
+          </h1>
           <p className="hidden text-sm text-muted-foreground print:hidden md:block">
             {isAdmin
               ? "Базова валюта: EUR · Податок в Іспанії 19%, податок компанії 30% · Курс валют онлайн із фіксацією на дату створення"
