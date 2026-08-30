@@ -32,38 +32,24 @@ export function WeeklyChart() {
 
   return (
     <Card className="min-w-0 overflow-hidden print:hidden">
-      <CardHeader className="gap-3">
-        <div>
+      <CardHeader className="gap-1">
         <CardTitle>Динаміка доходів</CardTitle>
         <CardDescription>
           Валовий дохід (Gross) проти чистої виплати (Net) у {displayCurrency}.
         </CardDescription>
-        </div>
-        <div className="flex flex-wrap gap-2" role="group" aria-label="Період графіка">
-          {periodOptions.map((option) => (
-            <Button
-              key={option.value}
-              type="button"
-              size="sm"
-              variant={period === option.value ? "default" : "outline"}
-              onClick={() => setPeriod(option.value)}
-            >
-              {option.label}
-            </Button>
-          ))}
-        </div>
       </CardHeader>
-      <CardContent>
-        <div className="h-72 w-full">
+      <CardContent className="flex min-w-0 flex-col gap-3">
+        <div className="h-56 w-full min-w-0 md:h-72">
           {hydrated && data.length > 0 ? (
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={data} barGap={4}>
+              <BarChart data={data} barGap={4} margin={{ top: 8, right: 4, left: 0, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                <XAxis dataKey="label" tickLine={false} axisLine={false} />
+                <XAxis dataKey="label" tickLine={false} axisLine={false} tick={{ fontSize: 11 }} />
                 <YAxis
                   tickLine={false}
                   axisLine={false}
-                  width={72}
+                  width={48}
+                  tick={{ fontSize: 11 }}
                   tickFormatter={(value: number) =>
                     formatCompactMoney(value, displayCurrency)
                   }
@@ -83,6 +69,20 @@ export function WeeklyChart() {
               Додайте проєкт, щоб побачити графік динаміки доходів.
             </div>
           )}
+        </div>
+        <div className="grid w-full grid-cols-3 gap-2" role="group" aria-label="Період графіка">
+          {periodOptions.map((option) => (
+            <Button
+              key={option.value}
+              type="button"
+              size="sm"
+              variant={period === option.value ? "default" : "outline"}
+              className="h-8 min-w-0 px-1 text-[11px] leading-tight sm:text-sm"
+              onClick={() => setPeriod(option.value)}
+            >
+              {option.label}
+            </Button>
+          ))}
         </div>
       </CardContent>
     </Card>

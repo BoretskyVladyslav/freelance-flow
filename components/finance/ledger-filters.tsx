@@ -64,7 +64,7 @@ export function LedgerFilters() {
             if (value === "all" || value === "personal") setTeamScope(value);
           }}
         >
-          <SelectTrigger aria-label="Охоплення команди" className="min-w-0 max-w-full sm:min-w-44">
+        <SelectTrigger aria-label="Охоплення команди" className="min-w-0 max-w-full basis-[calc(50%-0.25rem)] md:min-w-44 md:basis-auto">
             <SelectValue>
               {(value: string | null) =>
                 value && value in TEAM_SCOPE_ITEMS
@@ -86,7 +86,7 @@ export function LedgerFilters() {
           value && setFilters((current) => ({ ...current, platform: value as typeof current.platform }))
         }
       >
-        <SelectTrigger aria-label="Фільтр за платформою" className="min-w-0 max-w-full sm:min-w-40">
+        <SelectTrigger aria-label="Фільтр за платформою" className="min-w-0 max-w-full basis-[calc(50%-0.25rem)] md:min-w-40 md:basis-auto">
           <SelectValue>
             {(value: string | null) =>
               value && value in PLATFORM_FILTER_ITEMS
@@ -112,7 +112,7 @@ export function LedgerFilters() {
           value && setFilters((current) => ({ ...current, status: value as typeof current.status }))
         }
       >
-        <SelectTrigger aria-label="Фільтр за статусом" className="min-w-0 max-w-full sm:min-w-36">
+        <SelectTrigger aria-label="Фільтр за статусом" className="min-w-0 max-w-full basis-[calc(50%-0.25rem)] md:min-w-36 md:basis-auto">
           <SelectValue>
             {(value: string | null) =>
               value && value in STATUS_FILTER_ITEMS
@@ -138,7 +138,7 @@ export function LedgerFilters() {
           value && setFilters((current) => ({ ...current, month: value }))
         }
       >
-        <SelectTrigger aria-label="Фільтр за періодом" className="min-w-0 max-w-full sm:min-w-36">
+        <SelectTrigger aria-label="Фільтр за періодом" className="min-w-0 max-w-full basis-[calc(50%-0.25rem)] md:min-w-36 md:basis-auto">
           <SelectValue>
             {(value: string | null) =>
               !value || value === "all" ? "Всі періоди" : value
@@ -162,7 +162,7 @@ export function LedgerFilters() {
           value && setFilters((current) => ({ ...current, week: value }))
         }
       >
-        <SelectTrigger aria-label="Фільтр за тижнем" className="min-w-0 max-w-full sm:min-w-36">
+        <SelectTrigger aria-label="Фільтр за тижнем" className="min-w-0 max-w-full basis-[calc(50%-0.25rem)] md:min-w-36 md:basis-auto">
           <SelectValue>
             {(value: string | null) =>
               !value || value === "all" ? "Всі тижні" : value.replace("-W", " Т")

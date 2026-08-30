@@ -1,14 +1,16 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { LogOut } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { createBrowserSupabaseClient } from "@/lib/supabase/client";
 
-export function LogoutButton() {
-  const router = useRouter();
+type LogoutButtonProps = {
+  compact?: boolean;
+};
+
+export function LogoutButton({ compact = false }: LogoutButtonProps) {
   if (!isSupabaseConfigured()) return null;
 
   async function onLogout() {
@@ -18,14 +20,20 @@ export function LogoutButton() {
       toast.error(error.message);
       return;
     }
-    router.replace("/login");
-    router.refresh();
+    window.location.assign("/login");
   }
 
   return (
-    <Button type="button" variant="outline" size="sm" onClick={() => void onLogout()}>
+    <Button
+      type="button"
+      variant="outline"
+      size="sm"
+      aria-label="Вийти"
+      className={compact ? "h-8 w-8 p-0" : undefined}
+      onClick={() => void onLogout()}
+    >
       <LogOut />
-      Вийти
+      {compact ? <span className="sr-only">Вийти</span> : "Вийти"}
     </Button>
   );
 }

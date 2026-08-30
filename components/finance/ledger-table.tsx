@@ -181,6 +181,58 @@ export function LedgerTable({ onEdit }: LedgerTableProps) {
 
   return (
     <>
+      <div className="grid grid-cols-1 gap-4 md:hidden print:hidden">
+        {filteredViews.map((row) => {
+          const net = formatMoney(
+            convertToDisplay(row.breakdown.netPayout, displayCurrency, rates),
+            displayCurrency,
+          );
+          return (
+            <div
+              key={row.id}
+              className="relative rounded-xl bg-card p-3 ring-1 ring-foreground/10"
+            >
+              <div className="mb-3 flex items-start gap-2 pr-8">
+                <p className="min-w-0 flex-1 truncate font-medium">{row.title}</p>
+                <Badge variant={PLATFORM_VARIANT[row.platform]} className="max-w-[40%] shrink-0 truncate">
+                  {PLATFORM_LABELS[row.platform]}
+                </Badge>
+              </div>
+              <div className="absolute top-2 right-2 print:hidden">
+                <RowActions
+                  row={row}
+                  onEdit={onEdit}
+                  onDelete={(transaction) => setPendingDelete(transaction)}
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-3 text-sm">
+                <div className="min-w-0">
+                  <p className="text-[11px] text-muted-foreground">Дата / Тиждень</p>
+                  <p className="font-medium">{formatDate(getTransactionStartDate(row))}</p>
+                  <p className="text-xs text-muted-foreground">Т{row.weekNumber}</p>
+                </div>
+                <div className="min-w-0">
+                  <p className="text-[11px] text-muted-foreground">Gross</p>
+                  <p className="tabular-nums">{formatMoney(row.grossAmount, row.currency)}</p>
+                </div>
+                <div className="min-w-0">
+                  <p className="text-[11px] text-muted-foreground">Статус</p>
+                  <Badge variant="outline" className={STATUS_CLASS[row.status]}>
+                    {STATUS_LABELS[row.status]}
+                  </Badge>
+                </div>
+                <div className="min-w-0">
+                  <p className="text-[11px] text-muted-foreground">Net</p>
+                  <p className="tabular-nums font-semibold text-green-600 dark:text-green-400">
+                    {net}
+                  </p>
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+      <div className="hidden md:block print:block">
       <Table containerClassName="overflow-x-hidden" className="w-full table-fixed">
         <TableHeader>
           <TableRow>
@@ -236,7 +288,7 @@ export function LedgerTable({ onEdit }: LedgerTableProps) {
               <TableCell className="hidden w-[12%] md:table-cell">
                 <TaxDetails row={row} />
               </TableCell>
-              <TableCell className="w-[12%] tabular-nums font-medium">
+              <TableCell className="w-[12%] tabular-nums font-medium text-green-600 dark:text-green-400">
                 {formatMoney(
                   convertToDisplay(row.breakdown.netPayout, displayCurrency, rates),
                   displayCurrency,
@@ -258,6 +310,7 @@ export function LedgerTable({ onEdit }: LedgerTableProps) {
           ))}
         </TableBody>
       </Table>
+      </div>
       <AlertDialog
         open={Boolean(pendingDelete)}
         onOpenChange={(open) => {

@@ -112,51 +112,66 @@ export function TeamPanel() {
     <Card className="min-w-0 overflow-x-hidden print:hidden">
       <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <CardTitle>Команда / Працівники</CardTitle>
-        <Button type="button" onClick={() => setOpen(true)}>
+        <Button type="button" size="sm" className="md:h-8" onClick={() => setOpen(true)}>
           Додати працівника
         </Button>
       </CardHeader>
       <CardContent>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Імʼя</TableHead>
-              <TableHead>Email</TableHead>
-              <TableHead>Роль</TableHead>
-              <TableHead className="hidden sm:table-cell">Створено</TableHead>
-              <TableHead>Статус</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {loading ? (
-              <TableRow>
-                <TableCell colSpan={5} className="text-muted-foreground">
-                  Завантаження…
-                </TableCell>
-              </TableRow>
-            ) : members.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={5} className="text-muted-foreground">
-                  Немає працівників.
-                </TableCell>
-              </TableRow>
-            ) : (
-              members.map((member) => (
-                <TableRow key={member.id}>
-                  <TableCell>{member.fullName || "—"}</TableCell>
-                  <TableCell>{member.email}</TableCell>
-                  <TableCell>{ROLE_LABELS[member.role]}</TableCell>
-                  <TableCell className="hidden sm:table-cell">{formatDate(member.createdAt)}</TableCell>
-                  <TableCell>
+        {loading ? (
+          <p className="text-sm text-muted-foreground">Завантаження…</p>
+        ) : members.length === 0 ? (
+          <p className="text-sm text-muted-foreground">Немає працівників.</p>
+        ) : (
+          <>
+            <div className="grid grid-cols-1 gap-3 md:hidden">
+              {members.map((member) => (
+                <div
+                  key={member.id}
+                  className="rounded-xl bg-card p-3 ring-1 ring-foreground/10"
+                >
+                  <div className="mb-1 flex items-start justify-between gap-2">
+                    <p className="min-w-0 truncate font-medium">{member.fullName || "—"}</p>
                     <Badge variant={member.status === "active" ? "secondary" : "destructive"}>
                       {STATUS_ACCOUNT_LABELS[member.status]}
                     </Badge>
-                  </TableCell>
-                </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
+                  </div>
+                  <p className="truncate text-sm text-muted-foreground">{member.email}</p>
+                  <Badge variant="outline" className="mt-2">
+                    {ROLE_LABELS[member.role]}
+                  </Badge>
+                </div>
+              ))}
+            </div>
+            <div className="hidden md:block">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Імʼя</TableHead>
+                    <TableHead>Email</TableHead>
+                    <TableHead>Роль</TableHead>
+                    <TableHead>Створено</TableHead>
+                    <TableHead>Статус</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {members.map((member) => (
+                    <TableRow key={member.id}>
+                      <TableCell>{member.fullName || "—"}</TableCell>
+                      <TableCell>{member.email}</TableCell>
+                      <TableCell>{ROLE_LABELS[member.role]}</TableCell>
+                      <TableCell>{formatDate(member.createdAt)}</TableCell>
+                      <TableCell>
+                        <Badge variant={member.status === "active" ? "secondary" : "destructive"}>
+                          {STATUS_ACCOUNT_LABELS[member.status]}
+                        </Badge>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          </>
+        )}
       </CardContent>
 
       <Dialog

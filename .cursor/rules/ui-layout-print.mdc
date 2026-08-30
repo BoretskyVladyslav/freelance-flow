@@ -6,9 +6,9 @@ alwaysApply: false
 
 # UI layout and print
 
-- Metric cards: `h-full flex flex-col justify-between`. Fixed-height title+icon row, value, subtext `mt-auto`. All five cards identical height.
+- Metric cards: `h-full flex flex-col justify-between`. Mobile (`< md` / 768px): `grid-cols-2`, `text-4xl` values, compact `--card-spacing`. From `md`: previous equal-height layout. Net is green; company tax is red/muted.
 - Quick-add modal: strict `grid-cols-2`. Equal-height label rows so inputs align horizontally. Do not put helper text inside a 2-col cell.
-- Ledger: `table-fixed w-full`, no `min-w-*` and no horizontal scroll. Project column truncates (`max-w-0 overflow-hidden truncate`).
+- Ledger: card list below `md` (`print:hidden`). From `md` and in print: `table-fixed w-full`, no `min-w-*`, project column truncates.
 - PDF is `window.print()` plus `@media print` in `app/globals.css`. No canvas, jspdf, or html2canvas.
 
 ```tsx

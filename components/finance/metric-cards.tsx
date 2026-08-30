@@ -27,6 +27,7 @@ export function MetricCards() {
     icon: LucideIcon;
     iconClass?: string;
     valueClass?: string;
+    span?: string;
   }> = [
     {
       key: "gross",
@@ -52,6 +53,7 @@ export function MetricCards() {
         ? "Агрегація по компанії. Нараховується на залишок після сплати іспанського податку."
         : "Нараховується на залишок після сплати іспанського податку.",
       icon: Building2,
+      valueClass: "text-red-600/80 dark:text-red-400",
     },
     {
       key: "net",
@@ -59,6 +61,7 @@ export function MetricCards() {
       value: formatMoney(displayTotals.netPayout, displayCurrency),
       description: `Залишилось до виплати: ${formatMoney(displayTotals.remainingToBePaid, displayCurrency)}`,
       icon: Wallet,
+      valueClass: "text-green-600 dark:text-green-400",
     },
     {
       key: "fx",
@@ -72,6 +75,7 @@ export function MetricCards() {
         : gainNegative
           ? "text-destructive"
           : "",
+      span: "col-span-2 xl:col-span-1",
     },
   ];
 
@@ -79,25 +83,38 @@ export function MetricCards() {
     <section
       aria-live="polite"
       aria-atomic="true"
-      className="grid items-stretch gap-4 sm:grid-cols-2 xl:grid-cols-5"
+      className="grid min-w-0 grid-cols-2 items-stretch gap-3 md:gap-4 xl:grid-cols-5"
     >
       {cards.map((card) => (
-        <Card key={card.key} className="flex h-full min-w-0 flex-col justify-between">
+        <Card
+          key={card.key}
+          className={cn(
+            "flex h-full min-w-0 flex-col justify-between [--card-spacing:--spacing(3)] md:[--card-spacing:--spacing(4)]",
+            card.span,
+          )}
+        >
           <CardHeader className="gap-2">
-            <div className="flex h-10 items-start justify-between gap-2">
-              <CardDescription className="line-clamp-2 leading-5">
+            <div className="flex h-8 items-start justify-between gap-2 md:h-10">
+              <CardDescription className="line-clamp-2 text-xs leading-4 md:text-sm md:leading-5">
                 {card.title}
               </CardDescription>
               <card.icon
                 className={cn("size-4 shrink-0 text-muted-foreground", card.iconClass)}
               />
             </div>
-            <CardTitle className={cn("text-xl tabular-nums break-all sm:text-2xl", card.valueClass)}>
+            <CardTitle
+              className={cn(
+                "text-4xl leading-none font-semibold tabular-nums break-all print:text-2xl md:text-2xl",
+                card.valueClass,
+              )}
+            >
               {hydrated ? card.value : "—"}
             </CardTitle>
           </CardHeader>
           <CardContent className="mt-auto">
-            <p className="min-h-[2.5rem] text-xs text-muted-foreground">{card.description}</p>
+            <p className="hidden min-h-[2.5rem] text-xs text-muted-foreground md:block">
+              {card.description}
+            </p>
           </CardContent>
         </Card>
       ))}
