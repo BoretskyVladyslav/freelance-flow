@@ -1,5 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import { authCookieOptions, isHttpsProtocol, mergeAuthCookieOptions } from "@/lib/supabase/cookie-options";
 import { getSupabaseEnv, isSupabaseConfigured } from "@/lib/supabase/env";
 import type { Database } from "@/types/database";
 
@@ -18,8 +19,10 @@ export async function updateSession(request: NextRequest) {
 
   let supabaseResponse = NextResponse.next({ request });
   const { url, anonKey } = getSupabaseEnv();
+  const secure = isHttpsProtocol(request.nextUrl.protocol);
 
   const supabase = createServerClient<Database>(url, anonKey, {
+    cookieOptions: authCookieOptions(secure),
     cookies: {
       getAll() {
         return request.cookies.getAll();
@@ -30,7 +33,7 @@ export async function updateSession(request: NextRequest) {
         });
         supabaseResponse = NextResponse.next({ request });
         cookiesToSet.forEach(({ name, value, options }) => {
-          supabaseResponse.cookies.set(name, value, options);
+          supabaseResponse.cookies.set(name, value, mergeAuthCookieOptions(options, secure));
         });
         Object.entries(headers).forEach(([key, value]) => {
           supabaseResponse.headers.set(key, value);

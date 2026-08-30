@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { sanitizeEmail } from "@/lib/auth/credentials";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { createBrowserSupabaseClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
@@ -15,16 +16,21 @@ export function LoginForm() {
   const [submitting, setSubmitting] = useState(false);
   const configured = isSupabaseConfigured();
 
-  async function onSubmit(event: React.FormEvent) {
+  async function onSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!configured) {
       toast.error("Supabase не налаштовано.");
       return;
     }
+    const cleanEmail = sanitizeEmail(email);
+    const cleanPassword = password;
     setSubmitting(true);
     try {
       const supabase = createBrowserSupabaseClient();
-      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: cleanEmail,
+        password: cleanPassword,
+      });
       if (error || !data.user) {
         toast.error(error?.message ?? "Невірний email або пароль.");
         return;
@@ -71,17 +77,25 @@ export function LoginForm() {
   }
 
   return (
-    <form method="post" action="/login" onSubmit={onSubmit} className="grid gap-4">
+    <form
+      method="post"
+      action="/login"
+      onSubmit={onSubmit}
+      className="grid gap-4 touch-manipulation"
+    >
       <div className="grid gap-1.5">
         <Label htmlFor="email">Email</Label>
         <Input
           id="email"
           name="username"
           type="email"
+          inputMode="email"
           autoComplete="username"
           autoCapitalize="none"
           autoCorrect="off"
-          spellCheck={false}
+          spellCheck="false"
+          lang="en"
+          enterKeyHint="go"
           required
           value={email}
           onChange={(event) => setEmail(event.target.value)}
@@ -95,6 +109,9 @@ export function LoginForm() {
           name="password"
           type="password"
           autoComplete="current-password"
+          autoCapitalize="none"
+          autoCorrect="off"
+          spellCheck="false"
           required
           value={password}
           onChange={(event) => setPassword(event.target.value)}

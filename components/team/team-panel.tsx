@@ -31,6 +31,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { formatDate } from "@/lib/format";
+import { sanitizeEmail } from "@/lib/auth/credentials";
 import { ROLE_LABELS, STATUS_ACCOUNT_LABELS } from "@/lib/labels";
 import type { UserRole } from "@/types/database";
 import type { TeamMember } from "@/types/team";
@@ -87,7 +88,11 @@ export function TeamPanel() {
       const response = await fetch("/api/team", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
+        body: JSON.stringify({
+          ...form,
+          email: sanitizeEmail(form.email),
+          password: form.password,
+        }),
       });
       const payload = (await response.json()) as { error?: string };
       if (!response.ok) {
@@ -104,7 +109,7 @@ export function TeamPanel() {
   }
 
   return (
-    <Card className="print:hidden">
+    <Card className="min-w-0 overflow-x-hidden print:hidden">
       <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <CardTitle>Команда / Працівники</CardTitle>
         <Button type="button" onClick={() => setOpen(true)}>
@@ -118,7 +123,7 @@ export function TeamPanel() {
               <TableHead>Імʼя</TableHead>
               <TableHead>Email</TableHead>
               <TableHead>Роль</TableHead>
-              <TableHead>Створено</TableHead>
+              <TableHead className="hidden sm:table-cell">Створено</TableHead>
               <TableHead>Статус</TableHead>
             </TableRow>
           </TableHeader>
@@ -141,7 +146,7 @@ export function TeamPanel() {
                   <TableCell>{member.fullName || "—"}</TableCell>
                   <TableCell>{member.email}</TableCell>
                   <TableCell>{ROLE_LABELS[member.role]}</TableCell>
-                  <TableCell>{formatDate(member.createdAt)}</TableCell>
+                  <TableCell className="hidden sm:table-cell">{formatDate(member.createdAt)}</TableCell>
                   <TableCell>
                     <Badge variant={member.status === "active" ? "secondary" : "destructive"}>
                       {STATUS_ACCOUNT_LABELS[member.status]}
@@ -173,8 +178,14 @@ export function TeamPanel() {
               <Label htmlFor="team-email">Email</Label>
               <Input
                 id="team-email"
+                name="email"
                 type="email"
+                inputMode="email"
                 autoComplete="off"
+                autoCapitalize="none"
+                autoCorrect="off"
+                spellCheck="false"
+                lang="en"
                 required
                 value={form.email}
                 onChange={(event) => setForm((current) => ({ ...current, email: event.target.value }))}
@@ -184,8 +195,12 @@ export function TeamPanel() {
               <Label htmlFor="team-password">Початковий пароль</Label>
               <Input
                 id="team-password"
+                name="password"
                 type="password"
                 autoComplete="new-password"
+                autoCapitalize="none"
+                autoCorrect="off"
+                spellCheck="false"
                 required
                 minLength={8}
                 value={form.password}

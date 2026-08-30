@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import localFont from "next/font/local";
 import { AppProviders } from "@/components/providers";
 import { cn } from "@/lib/utils";
@@ -19,6 +19,13 @@ const geistMono = localFont({
 export const metadata: Metadata = {
   title: "Freelance Flow",
   description: "CRM для обліку фриланс-доходу, податків і мультивалютних виплат.",
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
+  interactiveWidget: "resizes-content",
 };
 
 export default function RootLayout({

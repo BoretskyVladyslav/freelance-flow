@@ -31,7 +31,7 @@ export function WeeklyChart() {
   ];
 
   return (
-    <Card className="print:hidden">
+    <Card className="min-w-0 overflow-hidden print:hidden">
       <CardHeader className="gap-3">
         <div>
         <CardTitle>Динаміка доходів</CardTitle>

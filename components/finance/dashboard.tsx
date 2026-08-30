@@ -35,7 +35,7 @@ export function Dashboard() {
   const [selectedProject, setSelectedProject] = useState<Transaction | null>(null);
 
   return (
-    <main className="mx-auto flex min-h-screen w-full max-w-7xl flex-col gap-6 overflow-x-hidden px-4 py-6 sm:px-6 lg:px-8">
+    <main className="mx-auto flex min-h-screen w-full min-w-0 max-w-7xl flex-col gap-6 overflow-x-hidden px-4 py-6 sm:px-6 lg:px-8">
       <header className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         <div>
           <p className="text-xs font-medium tracking-[0.18em] text-muted-foreground uppercase print:hidden">
@@ -92,12 +92,12 @@ export function Dashboard() {
       <MetricCards />
       <WeeklyChart />
 
-      <Card className="overflow-visible">
+      <Card className="min-w-0 overflow-x-hidden overflow-y-visible">
         <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <CardTitle>Журнал транзакцій</CardTitle>
           <LedgerFilters />
         </CardHeader>
-        <CardContent className="overflow-visible">
+        <CardContent className="overflow-x-hidden overflow-y-visible">
           <LedgerTable
             onEdit={(project) => {
               setSelectedProject(project);

@@ -107,6 +107,12 @@
   html {
     @apply font-sans;
   }
+  button,
+  [type="submit"],
+  [type="button"],
+  a {
+    touch-action: manipulation;
+  }
 }
 
 @media print {

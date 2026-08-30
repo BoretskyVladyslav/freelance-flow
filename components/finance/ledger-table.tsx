@@ -186,9 +186,9 @@ export function LedgerTable({ onEdit }: LedgerTableProps) {
           <TableRow>
             <TableHead className="w-[14%]">Дата / Тиждень</TableHead>
             <TableHead className="w-[30%]">Проєкт</TableHead>
-            <TableHead className="w-[10%]">Платформа</TableHead>
+            <TableHead className="hidden w-[10%] sm:table-cell">Платформа</TableHead>
             <TableHead className="w-[12%]">Gross (оригінал)</TableHead>
-            <TableHead className="w-[12%]">Податки</TableHead>
+            <TableHead className="hidden w-[12%] md:table-cell">Податки</TableHead>
             <TableHead className="w-[12%]">Net до отримання</TableHead>
             <TableHead className="w-[8%]">Статус</TableHead>
             <TableHead className="w-10 print:hidden">
@@ -225,7 +225,7 @@ export function LedgerTable({ onEdit }: LedgerTableProps) {
                   <div className="truncate text-xs text-muted-foreground">{row.notes}</div>
                 ) : null}
               </TableCell>
-              <TableCell className="w-[10%] overflow-hidden">
+              <TableCell className="hidden w-[10%] overflow-hidden sm:table-cell">
                 <Badge variant={PLATFORM_VARIANT[row.platform]} className="max-w-full truncate">
                   {PLATFORM_LABELS[row.platform]}
                 </Badge>
@@ -233,7 +233,7 @@ export function LedgerTable({ onEdit }: LedgerTableProps) {
               <TableCell className="w-[12%] tabular-nums">
                 {formatMoney(row.grossAmount, row.currency)}
               </TableCell>
-              <TableCell className="w-[12%]">
+              <TableCell className="hidden w-[12%] md:table-cell">
                 <TaxDetails row={row} />
               </TableCell>
               <TableCell className="w-[12%] tabular-nums font-medium">
