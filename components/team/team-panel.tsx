@@ -30,7 +30,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { formatDate } from "@/lib/format";
+import { FormattedDate } from "@/components/ui/formatted-date";
 import { sanitizeEmail } from "@/lib/auth/credentials";
 import { ROLE_LABELS, STATUS_ACCOUNT_LABELS } from "@/lib/labels";
 import type { UserRole } from "@/types/database";
@@ -159,7 +159,9 @@ export function TeamPanel() {
                       <TableCell>{member.fullName || "—"}</TableCell>
                       <TableCell>{member.email}</TableCell>
                       <TableCell>{ROLE_LABELS[member.role]}</TableCell>
-                      <TableCell>{formatDate(member.createdAt)}</TableCell>
+                      <TableCell>
+                        <FormattedDate value={member.createdAt} />
+                      </TableCell>
                       <TableCell>
                         <Badge variant={member.status === "active" ? "secondary" : "destructive"}>
                           {STATUS_ACCOUNT_LABELS[member.status]}

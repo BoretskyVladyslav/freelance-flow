@@ -37,7 +37,8 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { useFinance } from "@/components/finance/finance-provider";
-import { formatDate, formatMoney, formatSignedMoney } from "@/lib/format";
+import { formatMoney, formatSignedMoney } from "@/lib/format";
+import { FormattedDate } from "@/components/ui/formatted-date";
 import { cn } from "@/lib/utils";
 import { PLATFORM_LABELS, STATUS_LABELS } from "@/lib/labels";
 import { convertToDisplay, moneyNumber } from "@/lib/tax-calculator";
@@ -207,7 +208,9 @@ export function LedgerTable({ onEdit }: LedgerTableProps) {
               <div className="grid grid-cols-2 gap-3 text-sm">
                 <div className="min-w-0">
                   <p className="text-[11px] text-muted-foreground">Дата / Тиждень</p>
-                  <p className="font-medium">{formatDate(getTransactionStartDate(row))}</p>
+                  <p className="font-medium">
+                    <FormattedDate value={getTransactionStartDate(row)} />
+                  </p>
                   <p className="text-xs text-muted-foreground">Т{row.weekNumber}</p>
                 </div>
                 <div className="min-w-0">
@@ -232,11 +235,13 @@ export function LedgerTable({ onEdit }: LedgerTableProps) {
         })}
       </div>
       <div className="hidden md:block print:block">
-      <Table containerClassName="overflow-x-hidden" className="w-full table-fixed">
+      <Table containerClassName="overflow-x-auto" className="w-full border-collapse">
         <TableHeader>
           <TableRow>
-            <TableHead className="w-32 min-w-[128px] whitespace-nowrap">Дата / Тиждень</TableHead>
-            <TableHead className="max-w-xs">Проєкт</TableHead>
+            <TableHead className="w-36 min-w-[140px] whitespace-nowrap pr-4">
+              Дата / Тиждень
+            </TableHead>
+            <TableHead className="min-w-[220px] max-w-sm truncate pl-2">Проєкт</TableHead>
             <TableHead className="hidden w-[10%] sm:table-cell">Платформа</TableHead>
             <TableHead className="w-[12%]">Gross (оригінал)</TableHead>
             <TableHead className="hidden w-[12%] md:table-cell">Податки</TableHead>
@@ -250,19 +255,24 @@ export function LedgerTable({ onEdit }: LedgerTableProps) {
         <TableBody>
           {filteredViews.map((row) => (
             <TableRow key={row.id}>
-              <TableCell className="w-32 min-w-[128px] whitespace-nowrap">
+              <TableCell className="w-36 min-w-[140px] whitespace-nowrap pr-4">
                 <div className="font-medium">
-                  {formatDate(getTransactionStartDate(row))}
-                  {row.endDate ? ` — ${formatDate(row.endDate)}` : ""}
+                  <FormattedDate value={getTransactionStartDate(row)} />
+                  {row.endDate ? (
+                    <>
+                      {" — "}
+                      <FormattedDate value={row.endDate} />
+                    </>
+                  ) : null}
                 </div>
                 <div className="text-xs text-muted-foreground">Т{row.weekNumber}</div>
                 {row.payoutDate ? (
                   <div className="text-xs text-muted-foreground">
-                    Виплата: {formatDate(row.payoutDate)}
+                    Виплата: <FormattedDate value={row.payoutDate} />
                   </div>
                 ) : null}
               </TableCell>
-              <TableCell className="max-w-xs overflow-hidden">
+              <TableCell className="min-w-[220px] max-w-sm truncate pl-2">
                 <Tooltip>
                   <TooltipTrigger
                     title={row.title}

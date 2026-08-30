@@ -170,13 +170,15 @@ function periodLabel(key: string, period: ChartPeriod): string {
     return new Intl.DateTimeFormat("uk-UA", {
       day: "2-digit",
       month: "short",
-    }).format(new Date(`${key}T12:00:00`));
+      timeZone: "UTC",
+    }).format(new Date(`${key}T12:00:00.000Z`));
   }
   if (period === "month") {
     return new Intl.DateTimeFormat("uk-UA", {
       month: "short",
       year: "numeric",
-    }).format(new Date(`${key}-01T12:00:00`));
+      timeZone: "UTC",
+    }).format(new Date(`${key}-01T12:00:00.000Z`));
   }
   return key.replace("-W", " Т");
 }

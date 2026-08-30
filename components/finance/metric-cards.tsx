@@ -108,7 +108,7 @@ export function MetricCards() {
           </CardHeader>
           <CardContent className="mt-auto">
             <p className="hidden min-h-[2.5rem] text-xs text-muted-foreground md:block">
-              {card.description}
+              {hydrated ? card.description : ""}
             </p>
           </CardContent>
         </Card>

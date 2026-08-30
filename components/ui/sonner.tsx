@@ -3,13 +3,15 @@
 import { useTheme } from "next-themes"
 import { Toaster as Sonner, type ToasterProps } from "sonner"
 import { CircleCheckIcon, InfoIcon, TriangleAlertIcon, OctagonXIcon, Loader2Icon } from "lucide-react"
+import { useMounted } from "@/hooks/use-mounted"
 
 const Toaster = ({ ...props }: ToasterProps) => {
+  const mounted = useMounted()
   const { theme = "system" } = useTheme()
 
   return (
     <Sonner
-      theme={theme as ToasterProps["theme"]}
+      theme={(mounted ? theme : "light") as ToasterProps["theme"]}
       className="toaster group print:hidden"
       icons={{
         success: (

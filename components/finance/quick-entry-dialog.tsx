@@ -66,7 +66,7 @@ const EMPTY_FORM: FormState = {
   grossAmount: "",
   currency: "UAH",
   customFee: "0",
-  startDate: todayIsoDate(),
+  startDate: "",
   endDate: "",
   payoutDate: "",
   status: "In Progress",

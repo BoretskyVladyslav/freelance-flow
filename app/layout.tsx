@@ -39,7 +39,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="uk" suppressHydrationWarning className={cn("font-sans", geistSans.variable)}>
-      <body className={cn("min-h-screen antialiased", geistMono.variable)}>
+      <body suppressHydrationWarning className={cn("min-h-screen antialiased", geistMono.variable)}>
         <AppProviders>{children}</AppProviders>
       </body>
     </html>

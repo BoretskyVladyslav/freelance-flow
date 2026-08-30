@@ -19,6 +19,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { uahPerUnit } from "@/lib/exchange-rates";
 import { formatDate, formatRate } from "@/lib/format";
+import { useMounted } from "@/hooks/use-mounted";
 import type { Transaction } from "@/types/finance";
 
 export function Dashboard() {
@@ -31,6 +32,7 @@ export function Dashboard() {
     refreshRates,
     isAdmin,
   } = useFinance();
+  const mounted = useMounted();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedProject, setSelectedProject] = useState<Transaction | null>(null);
 
@@ -55,7 +57,8 @@ export function Dashboard() {
               : "Ваші проєкти, чисті виплати та персональні показники · Базова валюта EUR"}
           </p>
           <p className="hidden text-sm text-muted-foreground print:block">
-            Фінансовий звіт · {formatDate(new Date().toISOString())} · Валюта звіту:{" "}
+            Фінансовий звіт ·{" "}
+            {mounted ? formatDate(new Date().toISOString()) : "—"} · Валюта звіту:{" "}
             {displayCurrency}
           </p>
         </div>
@@ -113,10 +116,17 @@ export function Dashboard() {
       <CloudMigrationBanner />
 
       <p className="min-w-0 text-xs text-muted-foreground print:hidden" role="status">
-        Курс оновлено {formatDate(rates.fetchedAt)} · 1 USD = {formatRate(uahPerUnit("USD", rates))}{" "}
-        UAH · 1 EUR = {formatRate(uahPerUnit("EUR", rates))} UAH
-        {rates.stale ? " · використано збережений курс" : ""}
-        {ratesError ? ` · ${ratesError}` : ""}
+        {mounted ? (
+          <>
+            Курс оновлено {formatDate(rates.fetchedAt)} · 1 USD ={" "}
+            {formatRate(uahPerUnit("USD", rates))} UAH · 1 EUR ={" "}
+            {formatRate(uahPerUnit("EUR", rates))} UAH
+            {rates.stale ? " · використано збережений курс" : ""}
+            {ratesError ? ` · ${ratesError}` : ""}
+          </>
+        ) : (
+          "Курс оновлено —"
+        )}
       </p>
 
       <MetricCards />
