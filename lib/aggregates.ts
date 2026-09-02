@@ -143,30 +143,6 @@ export function toDisplayTotals(
   };
 }
 
-export function sumSelectedDisplayTotals(
-  views: TransactionView[],
-  selectedIds: string[],
-  displayCurrency: Currency,
-  rates: ExchangeRates | null,
-): { count: number; gross: number; taxes: number; net: number } {
-  const selected = new Set(selectedIds);
-  const rows = views.filter((row) => selected.has(row.id));
-  const eur = rows.reduce(
-    (acc, row) => ({
-      gross: acc.gross.plus(row.breakdown.grossInBase),
-      taxes: acc.taxes.plus(row.breakdown.spainTax).plus(row.breakdown.companyTax),
-      net: acc.net.plus(row.breakdown.netPayout),
-    }),
-    { gross: new Decimal(0), taxes: new Decimal(0), net: new Decimal(0) },
-  );
-  return {
-    count: rows.length,
-    gross: convertToDisplay(moneyNumber(eur.gross), displayCurrency, rates),
-    taxes: convertToDisplay(moneyNumber(eur.taxes), displayCurrency, rates),
-    net: convertToDisplay(moneyNumber(eur.net), displayCurrency, rates),
-  };
-}
-
 export function weeklySeries(
   transactions: TransactionView[],
   displayCurrency: Currency,

@@ -1,7 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { Eye } from "lucide-react";
 import { toast } from "sonner";
+import { useFinance } from "@/components/finance/finance-provider";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -56,6 +58,7 @@ const EMPTY_FORM: FormState = {
 };
 
 export function TeamPanel() {
+  const { viewEmployee } = useFinance();
   const [members, setMembers] = useState<TeamMember[]>([]);
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(false);
@@ -108,6 +111,17 @@ export function TeamPanel() {
     }
   }
 
+  function memberLabel(member: TeamMember): string {
+    return member.fullName.trim() || member.email;
+  }
+
+  function onViewProjects(member: TeamMember) {
+    viewEmployee(member.id, memberLabel(member));
+    document
+      .getElementById("financial-overview")
+      ?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
   return (
     <Card className="min-w-0 overflow-x-hidden print:hidden">
       <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -139,6 +153,16 @@ export function TeamPanel() {
                   <Badge variant="outline" className="mt-2">
                     {ROLE_LABELS[member.role]}
                   </Badge>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="mt-3 w-full"
+                    onClick={() => onViewProjects(member)}
+                  >
+                    <Eye className="size-4" />
+                    Переглянути проєкти
+                  </Button>
                 </div>
               ))}
             </div>
@@ -151,6 +175,9 @@ export function TeamPanel() {
                     <TableHead>Роль</TableHead>
                     <TableHead>Створено</TableHead>
                     <TableHead>Статус</TableHead>
+                    <TableHead className="w-12">
+                      <span className="sr-only">Дії</span>
+                    </TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -166,6 +193,18 @@ export function TeamPanel() {
                         <Badge variant={member.status === "active" ? "secondary" : "destructive"}>
                           {STATUS_ACCOUNT_LABELS[member.status]}
                         </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8"
+                          aria-label={`Переглянути проєкти: ${memberLabel(member)}`}
+                          onClick={() => onViewProjects(member)}
+                        >
+                          <Eye className="size-4" />
+                        </Button>
                       </TableCell>
                     </TableRow>
                   ))}

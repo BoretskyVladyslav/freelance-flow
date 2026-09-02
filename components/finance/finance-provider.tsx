@@ -37,7 +37,7 @@ import {
   type Transaction,
 } from "@/types/finance";
 import type { UserRole } from "@/types/database";
-import type { TeamScope } from "@/types/team";
+import type { EmployeeView, TeamScope } from "@/types/team";
 
 type FinanceContextValue = {
   hydrated: boolean;
@@ -45,7 +45,10 @@ type FinanceContextValue = {
   isAdmin: boolean;
   currentUserId: string;
   teamScope: TeamScope;
-  setTeamScope: (scope: TeamScope) => void;
+  setTeamScope: (scope: TeamScope, label?: string) => void;
+  employeeView: EmployeeView | null;
+  viewEmployee: (id: string, label: string) => void;
+  clearEmployeeView: () => void;
   transactions: Transaction[];
   views: TransactionView[];
   filteredViews: TransactionView[];
@@ -87,7 +90,8 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
   const [persistEnabled, setPersistEnabled] = useState(false);
   const [role, setRole] = useState<UserRole>("employee");
   const [currentUserId, setCurrentUserId] = useState("");
-  const [teamScope, setTeamScope] = useState<TeamScope>("all");
+  const [teamScope, setTeamScopeState] = useState<TeamScope>("all");
+  const [employeeView, setEmployeeView] = useState<EmployeeView | null>(null);
   const [snapshot, setSnapshot] = useState<FinanceSnapshot>({
     transactions: [],
     lastKnownRates: null,
@@ -153,7 +157,8 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
         setCurrentUserId(user.id);
         setRole(profile.data.role);
         if (profile.data.role !== "admin") {
-          setTeamScope("personal");
+          setTeamScopeState("personal");
+          setEmployeeView(null);
         }
       } catch {
         if (!cancelled) {
@@ -186,6 +191,26 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
   }, [exchange.rates, hydrated]);
 
   const isAdmin = role === "admin";
+  const setTeamScope = useCallback((scope: TeamScope, label?: string) => {
+    setTeamScopeState(scope);
+    if (scope === "all" || scope === "personal") {
+      setEmployeeView(null);
+      return;
+    }
+    setEmployeeView({
+      id: scope,
+      label: (label ?? "").trim() || scope,
+    });
+  }, []);
+
+  const viewEmployee = useCallback((id: string, label: string) => {
+    setTeamScope(id, label);
+  }, [setTeamScope]);
+
+  const clearEmployeeView = useCallback(() => {
+    setTeamScope("all");
+  }, [setTeamScope]);
+
   const scopedTransactions = useMemo(
     () =>
       scopeTeamTransactions(snapshot.transactions, {
@@ -307,6 +332,9 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
       currentUserId,
       teamScope,
       setTeamScope,
+      employeeView,
+      viewEmployee,
+      clearEmployeeView,
       transactions: scopedTransactions,
       views,
       filteredViews,
@@ -331,9 +359,11 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     }),
     [
       addTransaction,
+      clearEmployeeView,
       currentUserId,
       deleteTransaction,
       displayTotals,
+      employeeView,
       exchange.error,
       exchange.loading,
       exchange.rates,
@@ -350,9 +380,11 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
       scopedTransactions,
       setDisplayCurrency,
       snapshot.displayCurrency,
+      setTeamScope,
       teamScope,
       totals,
       updateTransaction,
+      viewEmployee,
       views,
       weekly,
     ],

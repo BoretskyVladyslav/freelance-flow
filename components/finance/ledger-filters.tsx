@@ -112,7 +112,7 @@ export function LedgerFilters() {
           value={teamScope}
           items={teamItems}
           onValueChange={(value) => {
-            if (value) setTeamScope(value);
+            if (value) setTeamScope(value, teamItems[value]);
           }}
         >
         <SelectTrigger aria-label="Охоплення команди" className="min-w-0 max-w-full basis-[calc(50%-0.25rem)] md:min-w-44 md:basis-auto">

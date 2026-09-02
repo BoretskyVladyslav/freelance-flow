@@ -31,6 +31,8 @@ export function Dashboard() {
     ratesRefreshing,
     refreshRates,
     isAdmin,
+    employeeView,
+    clearEmployeeView,
   } = useFinance();
   const mounted = useMounted();
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -129,6 +131,36 @@ export function Dashboard() {
         )}
       </p>
 
+      <div id="financial-overview" className="flex flex-col gap-4 scroll-mt-4 sm:gap-6">
+      {isAdmin && employeeView ? (
+        <div
+          role="status"
+          className="flex flex-col gap-2 rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-950 print:hidden sm:flex-row sm:items-center sm:justify-between dark:border-blue-800 dark:bg-blue-950/40 dark:text-blue-100"
+        >
+          <p className="min-w-0 font-medium">
+            Перегляд аналітики працівника: {employeeView.label}
+          </p>
+          <div className="flex shrink-0 gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="bg-white dark:bg-transparent"
+              onClick={clearEmployeeView}
+            >
+              Показати всіх
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={clearEmployeeView}
+            >
+              Скинути
+            </Button>
+          </div>
+        </div>
+      ) : null}
       <MetricCards />
       <WeeklyChart />
 
@@ -146,6 +178,7 @@ export function Dashboard() {
           />
         </CardContent>
       </Card>
+      </div>
 
       {isAdmin && isSupabaseConfigured() ? <TeamPanel /> : null}
 

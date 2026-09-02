@@ -12,3 +12,8 @@ export type TeamMember = {
 };
 
 export type TeamScope = "all" | "personal" | string;
+
+export type EmployeeView = {
+  id: string;
+  label: string;
+};
