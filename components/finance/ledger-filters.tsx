@@ -9,6 +9,7 @@ import {
   STATUS_LABELS,
   TEAM_SCOPE_ITEMS,
 } from "@/lib/labels";
+import { formatMonthFilterLabel, formatWeekFilterLabel } from "@/lib/format";
 import { monthKeyFromIsoDate, weekKeyFromIsoDate } from "@/lib/week";
 import {
   PAYMENT_STATUSES,
@@ -41,7 +42,7 @@ export function LedgerFilters() {
   const monthItems = useMemo(
     () => ({
       all: "Всі періоди",
-      ...Object.fromEntries(months.map((month) => [month, month])),
+      ...Object.fromEntries(months.map((month) => [month, formatMonthFilterLabel(month)])),
     }),
     [months],
   );
@@ -49,7 +50,7 @@ export function LedgerFilters() {
   const weekItems = useMemo(
     () => ({
       all: "Всі тижні",
-      ...Object.fromEntries(weeks.map((week) => [week, week.replace("-W", " Т")])),
+      ...Object.fromEntries(weeks.map((week) => [week, formatWeekFilterLabel(week)])),
     }),
     [weeks],
   );
@@ -141,7 +142,7 @@ export function LedgerFilters() {
         <SelectTrigger aria-label="Фільтр за періодом" className="min-w-0 max-w-full basis-[calc(50%-0.25rem)] md:min-w-36 md:basis-auto">
           <SelectValue>
             {(value: string | null) =>
-              !value || value === "all" ? "Всі періоди" : value
+              !value || value === "all" ? "Всі періоди" : formatMonthFilterLabel(value)
             }
           </SelectValue>
         </SelectTrigger>
@@ -149,7 +150,7 @@ export function LedgerFilters() {
           <SelectItem value="all">Всі періоди</SelectItem>
           {months.map((month) => (
             <SelectItem key={month} value={month}>
-              {month}
+              {formatMonthFilterLabel(month)}
             </SelectItem>
           ))}
         </SelectContent>
@@ -165,7 +166,7 @@ export function LedgerFilters() {
         <SelectTrigger aria-label="Фільтр за тижнем" className="min-w-0 max-w-full basis-[calc(50%-0.25rem)] md:min-w-36 md:basis-auto">
           <SelectValue>
             {(value: string | null) =>
-              !value || value === "all" ? "Всі тижні" : value.replace("-W", " Т")
+              !value || value === "all" ? "Всі тижні" : formatWeekFilterLabel(value)
             }
           </SelectValue>
         </SelectTrigger>
@@ -173,7 +174,7 @@ export function LedgerFilters() {
           <SelectItem value="all">Всі тижні</SelectItem>
           {weeks.map((week) => (
             <SelectItem key={week} value={week}>
-              {week.replace("-W", " Т")}
+              {formatWeekFilterLabel(week)}
             </SelectItem>
           ))}
         </SelectContent>

@@ -139,3 +139,13 @@ export function convertToDisplay(
   }
   return convertFromEur(amountEur, displayCurrency, rates);
 }
+
+export function displayCurrencyGainLoss(
+  originalCurrency: Currency,
+  gainEur: number,
+  displayCurrency: Currency,
+  rates: ExchangeRates | null | undefined,
+): number {
+  if (originalCurrency === displayCurrency) return 0;
+  return convertToDisplay(gainEur, displayCurrency, rates);
+}

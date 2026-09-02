@@ -29,14 +29,15 @@ import {
 } from "@/components/ui/tooltip";
 import { useFinance } from "@/components/finance/finance-provider";
 import { resolveRate } from "@/lib/exchange-rates";
-import { formatMoney, formatRate } from "@/lib/format";
+import { formatMoney, formatRate, formatWeekSpan } from "@/lib/format";
 import {
   PLATFORM_LABELS,
   STATUS_DESCRIPTIONS,
   STATUS_LABELS,
 } from "@/lib/labels";
+import { applyEndDateChange, applyStatusChange } from "@/lib/project-automation";
 import { calculateTransaction, convertToDisplay } from "@/lib/tax-calculator";
-import { isoWeekFromIsoDate, todayIsoDate } from "@/lib/week";
+import { isoWeekFromIsoDate, todayIsoDate, weekKeyFromIsoDate } from "@/lib/week";
 import {
   CURRENCIES,
   PAYMENT_STATUSES,
@@ -157,6 +158,22 @@ export function QuickEntryDialog({
     setForm((current) => ({ ...current, [key]: value }));
   }
 
+  function onStatusChange(value: string | null) {
+    if (!value) return;
+    const status = value as PaymentStatus;
+    setForm((current) => ({
+      ...current,
+      ...applyStatusChange(status, current.endDate, todayIsoDate()),
+    }));
+  }
+
+  function onEndDateChange(value: string) {
+    setForm((current) => ({
+      ...current,
+      ...applyEndDateChange(current.status, value),
+    }));
+  }
+
   function validate(): string | null {
     if (!form.title.trim()) return "Назва проєкту обовʼязкова.";
     if (!Number.isFinite(grossAmount) || grossAmount <= 0) {
@@ -271,7 +288,7 @@ export function QuickEntryDialog({
               <Select
                 value={form.status}
                 items={STATUS_LABELS}
-                onValueChange={(value) => value && setField("status", value as PaymentStatus)}
+                onValueChange={onStatusChange}
               >
                 <SelectTrigger id="status" className="w-full">
                   <SelectValue>
@@ -376,7 +393,7 @@ export function QuickEntryDialog({
                 id="endDate"
                 type="date"
                 value={form.endDate}
-                onChange={(event) => setField("endDate", event.target.value)}
+                onChange={(event) => onEndDateChange(event.target.value)}
               />
             </div>
             <div className="grid gap-1.5">
@@ -406,8 +423,10 @@ export function QuickEntryDialog({
           <p className="text-xs text-muted-foreground">{STATUS_DESCRIPTIONS[form.status]}</p>
 
           <p className="text-xs text-muted-foreground">
-            Зафіксований курс EUR: {formatRate(lockedRate)} · ISO-тиждень{" "}
-            {form.startDate ? isoWeekFromIsoDate(form.startDate) : "—"}
+            Зафіксований курс EUR: {formatRate(lockedRate)} ·{" "}
+            {form.startDate
+              ? formatWeekSpan(weekKeyFromIsoDate(form.startDate))
+              : "—"}
           </p>
 
           {preview ? (

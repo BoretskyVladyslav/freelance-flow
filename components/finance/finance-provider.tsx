@@ -205,8 +205,8 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
   const filteredViews = useMemo(() => applyFilters(views, filters), [filters, views]);
   const totals = useMemo(() => summarize(filteredViews), [filteredViews]);
   const displayTotals = useMemo(
-    () => toDisplayTotals(totals, snapshot.displayCurrency, exchange.rates),
-    [exchange.rates, snapshot.displayCurrency, totals],
+    () => toDisplayTotals(totals, snapshot.displayCurrency, exchange.rates, filteredViews),
+    [exchange.rates, filteredViews, snapshot.displayCurrency, totals],
   );
 
   const addTransaction = useCallback(

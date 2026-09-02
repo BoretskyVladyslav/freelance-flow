@@ -4,6 +4,8 @@ import {
   calculateTaxSequence,
   calculateTransaction,
   convertFromEur,
+  convertToDisplay,
+  displayCurrencyGainLoss,
   moneyNumber,
 } from "@/lib/tax-calculator";
 
@@ -87,6 +89,86 @@ describe("calculateTransaction", () => {
 
     expect(result.currencyGainLoss).toBe(0);
     expect(result.currentNetPayoutAtLiveRate).toBe(result.netPayout);
+  });
+});
+
+describe("displayCurrencyGainLoss", () => {
+  const rates = {
+    base: "EUR" as const,
+    fetchedAt: "2026-09-02T00:00:00.000Z",
+    toEur: {
+      EUR: 1,
+      USD: 0.95,
+      UAH: 0.025,
+      PLN: 0.23,
+    },
+  };
+
+  it("is 0.00 when original currency equals display currency (UAH viewed in UAH)", () => {
+    const breakdown = calculateTransaction(
+      {
+        grossAmount: 10000,
+        customFee: 0,
+        currency: "UAH",
+        exchangeRateAtCreation: 0.022,
+      },
+      0.025,
+    );
+
+    expect(breakdown.currencyGainLoss).not.toBe(0);
+    expect(
+      displayCurrencyGainLoss("UAH", breakdown.currencyGainLoss, "UAH", rates),
+    ).toBe(0);
+  });
+
+  it("is 0.00 when a USD project is viewed in USD", () => {
+    const breakdown = calculateTransaction(
+      {
+        grossAmount: 1000,
+        customFee: 50,
+        currency: "USD",
+        exchangeRateAtCreation: 0.9,
+      },
+      0.95,
+    );
+
+    expect(breakdown.currencyGainLoss).toBe(26.93);
+    expect(
+      displayCurrencyGainLoss("USD", breakdown.currencyGainLoss, "USD", rates),
+    ).toBe(0);
+  });
+
+  it("is 0.00 when an EUR project is viewed in EUR", () => {
+    const breakdown = calculateTransaction({
+      grossAmount: 500,
+      customFee: 0,
+      currency: "EUR",
+      exchangeRateAtCreation: 1,
+    });
+
+    expect(
+      displayCurrencyGainLoss("EUR", breakdown.currencyGainLoss, "EUR", rates),
+    ).toBe(0);
+  });
+
+  it("converts a USD EUR-delta when viewed in UAH", () => {
+    const breakdown = calculateTransaction(
+      {
+        grossAmount: 1000,
+        customFee: 50,
+        currency: "USD",
+        exchangeRateAtCreation: 0.9,
+      },
+      0.95,
+    );
+
+    expect(breakdown.currencyGainLoss).toBe(26.93);
+    expect(
+      displayCurrencyGainLoss("USD", breakdown.currencyGainLoss, "UAH", rates),
+    ).toBe(convertToDisplay(26.93, "UAH", rates));
+    expect(
+      displayCurrencyGainLoss("USD", breakdown.currencyGainLoss, "UAH", rates),
+    ).toBe(1077.2);
   });
 });
 

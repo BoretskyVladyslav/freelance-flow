@@ -35,11 +35,12 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { useFinance } from "@/components/finance/finance-provider";
-import { formatMoney, formatSignedMoney } from "@/lib/format";
+import { formatMoney, formatSignedMoney, formatWeekSpan } from "@/lib/format";
 import { FormattedDate } from "@/components/ui/formatted-date";
 import { cn } from "@/lib/utils";
 import { PLATFORM_LABELS, STATUS_LABELS } from "@/lib/labels";
 import { convertToDisplay, moneyNumber } from "@/lib/tax-calculator";
+import { weekKeyFromIsoDate } from "@/lib/week";
 import {
   PAYMENT_STATUSES,
   getTransactionStartDate,
@@ -62,6 +63,13 @@ const STATUS_CLASS: Record<PaymentStatus, string> = {
   Paid: "border-transparent bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300",
   Pending: "border-transparent bg-slate-100 text-slate-800 dark:bg-slate-800 dark:text-slate-300",
 };
+
+const compactHead = "h-8 px-2 py-1.5";
+const compactCell = "px-2 py-1.5";
+
+function rowWeekSpan(row: TransactionView): string {
+  return formatWeekSpan(weekKeyFromIsoDate(getTransactionStartDate(row)));
+}
 
 type LedgerTableProps = {
   onEdit: (transaction: Transaction) => void;
@@ -214,7 +222,7 @@ export function LedgerTable({ onEdit }: LedgerTableProps) {
                   <p className="font-medium whitespace-nowrap">
                     <FormattedDate value={getTransactionStartDate(row)} />
                   </p>
-                  <p className="text-xs text-muted-foreground">Т{row.weekNumber}</p>
+                  <p className="text-xs text-muted-foreground">{rowWeekSpan(row)}</p>
                 </div>
                 <div className="min-w-0">
                   <p className="text-[11px] text-muted-foreground">Gross</p>
@@ -238,44 +246,53 @@ export function LedgerTable({ onEdit }: LedgerTableProps) {
         })}
       </div>
       <div className="hidden md:block">
-      <Table containerClassName="overflow-x-auto" className="w-full border-collapse">
+      <Table
+        containerClassName="overflow-x-hidden"
+        className="w-full table-fixed border-collapse text-xs"
+      >
         <TableHeader>
           <TableRow>
-            <TableHead className="w-36 min-w-[140px] whitespace-nowrap pr-4">
+            <TableHead className={cn(compactHead, "w-[18%]")}>
               Дата / Тиждень
             </TableHead>
-            <TableHead className="min-w-[220px] max-w-sm truncate pl-2">Проєкт</TableHead>
-            <TableHead className="hidden w-[10%] sm:table-cell">Платформа</TableHead>
-            <TableHead className="w-[12%]">Gross (оригінал)</TableHead>
-            <TableHead className="hidden w-[12%] md:table-cell">Податки</TableHead>
-            <TableHead className="w-[12%]">Net до отримання</TableHead>
-            <TableHead className="w-[8%]">Статус</TableHead>
-            <TableHead className="w-10">
+            <TableHead className={cn(compactHead, "w-[28%] pl-2")}>Проєкт</TableHead>
+            <TableHead className={cn(compactHead, "hidden w-[10%] sm:table-cell")}>
+              Платформа
+            </TableHead>
+            <TableHead className={cn(compactHead, "w-[12%]")}>Gross (оригінал)</TableHead>
+            <TableHead className={cn(compactHead, "hidden w-[12%] md:table-cell")}>
+              Податки
+            </TableHead>
+            <TableHead className={cn(compactHead, "w-[12%]")}>Net до отримання</TableHead>
+            <TableHead className={cn(compactHead, "w-[8%]")}>Статус</TableHead>
+            <TableHead className={cn(compactHead, "w-10")}>
               <span className="sr-only">Дії</span>
             </TableHead>
           </TableRow>
         </TableHeader>
-        <TableBody>
+        <TableBody className="divide-y divide-slate-100 dark:divide-slate-800">
           {filteredViews.map((row) => (
-            <TableRow key={row.id}>
-              <TableCell className="w-36 min-w-[140px] whitespace-nowrap pr-4">
-                <div className="font-medium">
+            <TableRow key={row.id} className="border-0">
+              <TableCell className={cn(compactCell, "w-[18%] whitespace-nowrap")}>
+                <div className="font-medium leading-tight">
                   <FormattedDate value={getTransactionStartDate(row)} />
+                </div>
+                <div className="text-[11px] leading-tight text-muted-foreground">
                   {row.endDate ? (
                     <>
-                      {" — "}
-                      <FormattedDate value={row.endDate} />
+                      → <FormattedDate value={row.endDate} variant="day-month" />
+                      {" · "}
                     </>
                   ) : null}
+                  {rowWeekSpan(row)}
                 </div>
-                <div className="text-xs text-muted-foreground">Т{row.weekNumber}</div>
                 {row.payoutDate ? (
-                  <div className="text-xs text-muted-foreground">
+                  <div className="text-[11px] leading-tight text-muted-foreground">
                     Виплата: <FormattedDate value={row.payoutDate} />
                   </div>
                 ) : null}
               </TableCell>
-              <TableCell className="min-w-[220px] max-w-sm truncate pl-2">
+              <TableCell className={cn(compactCell, "w-[28%] truncate pl-2")}>
                 <Tooltip>
                   <TooltipTrigger
                     title={row.title}
@@ -286,32 +303,32 @@ export function LedgerTable({ onEdit }: LedgerTableProps) {
                   <TooltipContent className="max-w-xs">{row.title}</TooltipContent>
                 </Tooltip>
                 {row.notes ? (
-                  <div className="truncate text-xs text-muted-foreground">{row.notes}</div>
+                  <div className="truncate text-[11px] text-muted-foreground">{row.notes}</div>
                 ) : null}
               </TableCell>
-              <TableCell className="hidden w-[10%] overflow-hidden sm:table-cell">
+              <TableCell className={cn(compactCell, "hidden w-[10%] overflow-hidden sm:table-cell")}>
                 <Badge variant="outline" className={cn("max-w-full truncate", PLATFORM_BADGE_CLASS[row.platform])}>
                   {PLATFORM_LABELS[row.platform]}
                 </Badge>
               </TableCell>
-              <TableCell className="w-[12%] tabular-nums">
+              <TableCell className={cn(compactCell, "w-[12%] tabular-nums")}>
                 {formatMoney(row.grossAmount, row.currency)}
               </TableCell>
-              <TableCell className="hidden w-[12%] md:table-cell">
+              <TableCell className={cn(compactCell, "hidden w-[12%] md:table-cell")}>
                 <TaxDetails row={row} />
               </TableCell>
-              <TableCell className="w-[12%] tabular-nums font-medium text-emerald-600 dark:text-emerald-400">
+              <TableCell className={cn(compactCell, "w-[12%] tabular-nums font-medium text-emerald-600 dark:text-emerald-400")}>
                 {formatMoney(
                   convertToDisplay(row.breakdown.netPayout, displayCurrency, rates),
                   displayCurrency,
                 )}
               </TableCell>
-              <TableCell className="w-[8%]">
+              <TableCell className={cn(compactCell, "w-[8%]")}>
                 <Badge variant="outline" className={STATUS_CLASS[row.status]}>
                   {STATUS_LABELS[row.status]}
                 </Badge>
               </TableCell>
-              <TableCell className="w-10">
+              <TableCell className={cn(compactCell, "w-10")}>
                 <RowActions
                   row={row}
                   onEdit={onEdit}

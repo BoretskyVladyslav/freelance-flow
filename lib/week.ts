@@ -40,3 +40,25 @@ export function monthKeyFromIsoDate(isoDate: string): string {
 export function todayIsoDate(): string {
   return new Date().toISOString().slice(0, 10);
 }
+
+const WEEK_KEY_PATTERN = /^(\d{4})-W(\d{2})$/;
+
+function toIsoDateUtc(date: Date): string {
+  return date.toISOString().slice(0, 10);
+}
+
+export function isoWeekRange(weekKey: string): { start: string; end: string } {
+  const match = WEEK_KEY_PATTERN.exec(weekKey);
+  if (!match) {
+    throw new Error(`Invalid ISO week key: ${weekKey}`);
+  }
+  const year = Number(match[1]);
+  const week = Number(match[2]);
+  const jan4 = new Date(Date.UTC(year, 0, 4));
+  const jan4Day = jan4.getUTCDay() || 7;
+  const monday = new Date(jan4);
+  monday.setUTCDate(jan4.getUTCDate() - (jan4Day - 1) + (week - 1) * 7);
+  const sunday = new Date(monday);
+  sunday.setUTCDate(monday.getUTCDate() + 6);
+  return { start: toIsoDateUtc(monday), end: toIsoDateUtc(sunday) };
+}

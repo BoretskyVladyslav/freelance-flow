@@ -52,7 +52,7 @@ describe("describeFilterRange", () => {
         month: "2026-08",
         week: "2026-W31",
       }),
-    ).toBe("Freelancehunt · Виплачено · 2026-08 · 2026 W31");
+    ).toBe("Freelancehunt · Виплачено · Серпень 2026 · Тиждень 27 лип.–2 серп. 2026");
   });
 });
 

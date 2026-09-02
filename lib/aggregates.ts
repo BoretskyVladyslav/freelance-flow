@@ -1,8 +1,10 @@
 import Decimal from "decimal.js";
 import { monthKeyFromIsoDate, weekKeyFromIsoDate } from "@/lib/week";
+import { formatWeekSpan } from "@/lib/format";
 import {
   calculateTransaction,
   convertToDisplay,
+  displayCurrencyGainLoss,
   moneyNumber,
 } from "@/lib/tax-calculator";
 import {
@@ -114,14 +116,30 @@ export function toDisplayTotals(
   totals: DashboardTotals,
   displayCurrency: Currency,
   rates: ExchangeRates | null,
+  views: TransactionView[],
 ): DashboardTotals {
+  const currencyGainLoss = moneyNumber(
+    views.reduce(
+      (acc, transaction) =>
+        acc.plus(
+          displayCurrencyGainLoss(
+            transaction.currency,
+            transaction.breakdown.currencyGainLoss,
+            displayCurrency,
+            rates,
+          ),
+        ),
+      new Decimal(0),
+    ),
+  );
+
   return {
     grossInBase: convertToDisplay(totals.grossInBase, displayCurrency, rates),
     spainTax: convertToDisplay(totals.spainTax, displayCurrency, rates),
     companyTax: convertToDisplay(totals.companyTax, displayCurrency, rates),
     netPayout: convertToDisplay(totals.netPayout, displayCurrency, rates),
     remainingToBePaid: convertToDisplay(totals.remainingToBePaid, displayCurrency, rates),
-    currencyGainLoss: convertToDisplay(totals.currencyGainLoss, displayCurrency, rates),
+    currencyGainLoss,
   };
 }
 
@@ -145,7 +163,7 @@ export function weeklySeries(
     .sort(([a], [b]) => a.localeCompare(b))
     .map(([weekKey, values]) => ({
       weekKey,
-      label: weekKey.replace("-W", " Т"),
+      label: formatWeekSpan(weekKey),
       gross: convertToDisplay(moneyNumber(values.gross), displayCurrency, rates),
       net: convertToDisplay(moneyNumber(values.net), displayCurrency, rates),
     }));
@@ -180,7 +198,7 @@ function periodLabel(key: string, period: ChartPeriod): string {
       timeZone: "UTC",
     }).format(new Date(`${key}-01T12:00:00.000Z`));
   }
-  return key.replace("-W", " Т");
+  return formatWeekSpan(key);
 }
 
 export function chartSeries(

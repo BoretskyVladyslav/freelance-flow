@@ -2,7 +2,7 @@ import {
   PLATFORM_LABELS,
   STATUS_LABELS,
 } from "@/lib/labels";
-import { formatDate, formatMoney } from "@/lib/format";
+import { formatDate, formatMoney, formatMonthFilterLabel, formatWeekFilterLabel } from "@/lib/format";
 import { convertToDisplay } from "@/lib/tax-calculator";
 import {
   getTransactionStartDate,
@@ -28,8 +28,10 @@ export function describeFilterRange(filters: LedgerFilters): string {
   const platform =
     filters.platform === "all" ? "All platforms" : PLATFORM_LABELS[filters.platform];
   const status = filters.status === "all" ? "All statuses" : STATUS_LABELS[filters.status];
-  const month = filters.month === "all" ? "All months" : filters.month;
-  const week = filters.week === "all" ? "All weeks" : filters.week.replace("-W", " W");
+  const month =
+    filters.month === "all" ? "All months" : formatMonthFilterLabel(filters.month);
+  const week =
+    filters.week === "all" ? "All weeks" : formatWeekFilterLabel(filters.week);
   return `${platform} · ${status} · ${month} · ${week}`;
 }
 
