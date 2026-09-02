@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { applyFilters, summarize, withBreakdowns } from "@/lib/aggregates";
+import { applyFilters, summarize, sumSelectedDisplayTotals, withBreakdowns } from "@/lib/aggregates";
 import { LAST_RESORT_RATES } from "@/lib/exchange-rates";
 import { convertToDisplay } from "@/lib/tax-calculator";
 import {
@@ -89,5 +89,18 @@ describe("filtered PDF totals", () => {
     expect(rows[0][6]).toMatch(/\d/);
     const net = convertToDisplay(filtered[0].breakdown.netPayout, "UAH", LAST_RESORT_RATES);
     expect(net).toBeGreaterThan(0);
+  });
+});
+
+describe("sumSelectedDisplayTotals", () => {
+  it("sums converted EUR totals for the selected ids only", () => {
+    const views = withBreakdowns([usd, uah], LAST_RESORT_RATES);
+    const both = sumSelectedDisplayTotals(views, ["tx_1", "tx_2"], "EUR", LAST_RESORT_RATES);
+    const one = sumSelectedDisplayTotals(views, ["tx_1"], "EUR", LAST_RESORT_RATES);
+    expect(both.count).toBe(2);
+    expect(one.count).toBe(1);
+    expect(both.gross).toBeGreaterThan(one.gross);
+    expect(both.net).toBeGreaterThan(one.net);
+    expect(sumSelectedDisplayTotals(views, [], "EUR", LAST_RESORT_RATES).count).toBe(0);
   });
 });

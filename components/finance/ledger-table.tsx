@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { MoreHorizontal } from "lucide-react";
 import {
   AlertDialog,
@@ -41,6 +41,7 @@ import { cn } from "@/lib/utils";
 import { PLATFORM_LABELS, STATUS_LABELS } from "@/lib/labels";
 import { convertToDisplay, moneyNumber } from "@/lib/tax-calculator";
 import { weekKeyFromIsoDate } from "@/lib/week";
+import { sumSelectedDisplayTotals, type TransactionView } from "@/lib/aggregates";
 import {
   PAYMENT_STATUSES,
   getTransactionStartDate,
@@ -48,7 +49,6 @@ import {
   type Platform,
   type Transaction,
 } from "@/types/finance";
-import type { TransactionView } from "@/lib/aggregates";
 
 const PLATFORM_BADGE_CLASS: Record<Platform, string> = {
   Freelancehunt: "border bg-sky-100 text-sky-800 border-sky-200",
@@ -66,9 +66,78 @@ const STATUS_CLASS: Record<PaymentStatus, string> = {
 
 const compactHead = "h-8 px-2 py-1.5";
 const compactCell = "px-2 py-1.5";
+const checkboxClass =
+  "size-4 shrink-0 cursor-pointer rounded-sm border-slate-400 accent-emerald-500";
 
 function rowWeekSpan(row: TransactionView): string {
   return formatWeekSpan(weekKeyFromIsoDate(getTransactionStartDate(row)));
+}
+
+function SelectionCheckbox({
+  checked,
+  onChange,
+  label,
+  indeterminate = false,
+}: {
+  checked: boolean;
+  onChange: (checked: boolean) => void;
+  label: string;
+  indeterminate?: boolean;
+}) {
+  const ref = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    if (ref.current) ref.current.indeterminate = indeterminate && !checked;
+  }, [checked, indeterminate]);
+
+  return (
+    <input
+      ref={ref}
+      type="checkbox"
+      checked={checked}
+      onChange={(event) => onChange(event.target.checked)}
+      onClick={(event) => event.stopPropagation()}
+      aria-label={label}
+      className={checkboxClass}
+    />
+  );
+}
+
+function SelectionBar({
+  count,
+  gross,
+  taxes,
+  net,
+  currency,
+  onClear,
+}: {
+  count: number;
+  gross: number;
+  taxes: number;
+  net: number;
+  currency: Transaction["currency"];
+  onClear: () => void;
+}) {
+  return (
+    <div className="pointer-events-none fixed inset-x-0 bottom-4 z-50 flex justify-center print:hidden md:left-1/2 md:right-auto md:w-max md:-translate-x-1/2">
+      <div className="pointer-events-auto flex max-w-[calc(100%-2rem)] items-center gap-6 overflow-x-auto rounded-2xl border border-slate-700 bg-slate-900 px-5 py-3 text-sm text-white shadow-2xl">
+        <span className="shrink-0">Обрано: {count}</span>
+        <span className="shrink-0 tabular-nums">Валовий: {formatMoney(gross, currency)}</span>
+        <span className="shrink-0 tabular-nums">
+          Податки: {formatSignedMoney(-taxes, currency)}
+        </span>
+        <span className="shrink-0 font-bold tabular-nums text-[#10B981]">
+          До виплати (Net): {formatMoney(net, currency)}
+        </span>
+        <button
+          type="button"
+          className="shrink-0 rounded-lg border border-slate-600 px-3 py-1 text-xs hover:bg-slate-800"
+          onClick={onClear}
+        >
+          Скинути
+        </button>
+      </div>
+    </div>
+  );
 }
 
 type LedgerTableProps = {
@@ -172,6 +241,47 @@ function TaxDetails({ row }: { row: TransactionView }) {
 export function LedgerTable({ onEdit }: LedgerTableProps) {
   const { filteredViews, displayCurrency, rates, deleteTransaction, hydrated } = useFinance();
   const [pendingDelete, setPendingDelete] = useState<Transaction | null>(null);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+
+  const visibleIds = useMemo(() => filteredViews.map((row) => row.id), [filteredViews]);
+  const visibleKey = visibleIds.join(",");
+  const selectedSet = useMemo(() => new Set(selectedIds), [selectedIds]);
+  const allVisibleSelected =
+    visibleIds.length > 0 && visibleIds.every((id) => selectedSet.has(id));
+  const someVisibleSelected = visibleIds.some((id) => selectedSet.has(id));
+  const selectionTotals = useMemo(
+    () => sumSelectedDisplayTotals(filteredViews, selectedIds, displayCurrency, rates),
+    [displayCurrency, filteredViews, rates, selectedIds],
+  );
+
+  useEffect(() => {
+    setSelectedIds((current) => {
+      const visible = new Set(visibleKey ? visibleKey.split(",") : []);
+      const next = current.filter((id) => visible.has(id));
+      return next.length === current.length ? current : next;
+    });
+  }, [visibleKey]);
+
+  function toggleId(id: string, checked: boolean) {
+    setSelectedIds((current) => {
+      if (checked) {
+        return current.includes(id) ? current : [...current, id];
+      }
+      return current.filter((rowId) => rowId !== id);
+    });
+  }
+
+  function toggleAllVisible(checked: boolean) {
+    setSelectedIds((current) => {
+      const next = new Set(current);
+      if (checked) {
+        for (const id of visibleIds) next.add(id);
+      } else {
+        for (const id of visibleIds) next.delete(id);
+      }
+      return Array.from(next);
+    });
+  }
 
   if (!hydrated) {
     return <p className="text-sm text-muted-foreground">Завантаження журналу…</p>;
@@ -179,9 +289,21 @@ export function LedgerTable({ onEdit }: LedgerTableProps) {
 
   if (filteredViews.length === 0) {
     return (
-      <p className="rounded-lg border border-dashed p-8 text-center text-sm text-muted-foreground">
-        Немає проєктів, які відповідають вибраним фільтрам.
-      </p>
+      <>
+        <p className="rounded-lg border border-dashed p-8 text-center text-sm text-muted-foreground">
+          Немає проєктів, які відповідають вибраним фільтрам.
+        </p>
+        {selectedIds.length > 0 ? (
+          <SelectionBar
+            count={selectionTotals.count}
+            gross={selectionTotals.gross}
+            taxes={selectionTotals.taxes}
+            net={selectionTotals.net}
+            currency={displayCurrency}
+            onClear={() => setSelectedIds([])}
+          />
+        ) : null}
+      </>
     );
   }
 
@@ -199,6 +321,11 @@ export function LedgerTable({ onEdit }: LedgerTableProps) {
               className="relative rounded-xl border border-slate-200/80 bg-card p-4 pr-14 shadow-sm dark:border-slate-800"
             >
               <div className="mb-3 flex items-start gap-2">
+                <SelectionCheckbox
+                  checked={selectedSet.has(row.id)}
+                  onChange={(checked) => toggleId(row.id, checked)}
+                  label={`Обрати ${row.title}`}
+                />
                 <p className="min-w-0 flex-1 text-base font-semibold leading-snug">
                   {row.title}
                 </p>
@@ -252,7 +379,15 @@ export function LedgerTable({ onEdit }: LedgerTableProps) {
       >
         <TableHeader>
           <TableRow>
-            <TableHead className={cn(compactHead, "w-[18%]")}>
+            <TableHead className={cn(compactHead, "w-8 print:hidden")}>
+              <SelectionCheckbox
+                checked={allVisibleSelected}
+                indeterminate={someVisibleSelected && !allVisibleSelected}
+                onChange={toggleAllVisible}
+                label="Обрати всі"
+              />
+            </TableHead>
+            <TableHead className={cn(compactHead, "w-[16%]")}>
               Дата / Тиждень
             </TableHead>
             <TableHead className={cn(compactHead, "w-[28%] pl-2")}>Проєкт</TableHead>
@@ -273,7 +408,14 @@ export function LedgerTable({ onEdit }: LedgerTableProps) {
         <TableBody className="divide-y divide-slate-100 dark:divide-slate-800">
           {filteredViews.map((row) => (
             <TableRow key={row.id} className="border-0">
-              <TableCell className={cn(compactCell, "w-[18%] whitespace-nowrap")}>
+              <TableCell className={cn(compactCell, "w-8 print:hidden")}>
+                <SelectionCheckbox
+                  checked={selectedSet.has(row.id)}
+                  onChange={(checked) => toggleId(row.id, checked)}
+                  label={`Обрати ${row.title}`}
+                />
+              </TableCell>
+              <TableCell className={cn(compactCell, "w-[16%] whitespace-nowrap")}>
                 <div className="font-medium leading-tight">
                   <FormattedDate value={getTransactionStartDate(row)} />
                 </div>
@@ -340,6 +482,16 @@ export function LedgerTable({ onEdit }: LedgerTableProps) {
         </TableBody>
       </Table>
       </div>
+      {selectedIds.length > 0 ? (
+        <SelectionBar
+          count={selectionTotals.count}
+          gross={selectionTotals.gross}
+          taxes={selectionTotals.taxes}
+          net={selectionTotals.net}
+          currency={displayCurrency}
+          onClear={() => setSelectedIds([])}
+        />
+      ) : null}
       <AlertDialog
         open={Boolean(pendingDelete)}
         onOpenChange={(open) => {

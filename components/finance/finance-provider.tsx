@@ -26,6 +26,7 @@ import {
 } from "@/services/projects";
 import { buildFinancialOverview } from "@/services/financials";
 import { isoWeekFromIsoDate } from "@/lib/week";
+import { scopeTeamTransactions } from "@/lib/team-scope";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { createBrowserSupabaseClient } from "@/lib/supabase/client";
 import {
@@ -185,12 +186,15 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
   }, [exchange.rates, hydrated]);
 
   const isAdmin = role === "admin";
-  const scopedTransactions = useMemo(() => {
-    if (!isAdmin || teamScope !== "personal" || !currentUserId) {
-      return snapshot.transactions;
-    }
-    return snapshot.transactions.filter((row) => row.employeeId === currentUserId);
-  }, [currentUserId, isAdmin, snapshot.transactions, teamScope]);
+  const scopedTransactions = useMemo(
+    () =>
+      scopeTeamTransactions(snapshot.transactions, {
+        isAdmin,
+        currentUserId,
+        teamScope,
+      }),
+    [currentUserId, isAdmin, snapshot.transactions, teamScope],
+  );
 
   const overview = useMemo(
     () =>

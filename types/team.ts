@@ -11,4 +11,4 @@ export type TeamMember = {
   status: ProfileStatus;
 };
 
-export type TeamScope = "all" | "personal";
+export type TeamScope = "all" | "personal" | string;

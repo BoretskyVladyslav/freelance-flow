@@ -42,6 +42,7 @@ import {
   CURRENCIES,
   PAYMENT_STATUSES,
   PLATFORMS,
+  isPaymentStatus,
   type Currency,
   type PaymentStatus,
   type Platform,
@@ -158,20 +159,32 @@ export function QuickEntryDialog({
     setForm((current) => ({ ...current, [key]: value }));
   }
 
-  function onStatusChange(value: string | null) {
-    if (!value) return;
-    const status = value as PaymentStatus;
-    setForm((current) => ({
-      ...current,
-      ...applyStatusChange(status, current.endDate, todayIsoDate()),
-    }));
-  }
-
-  function onEndDateChange(value: string) {
+  function handleEndDateChange(value: string) {
     setForm((current) => ({
       ...current,
       ...applyEndDateChange(current.status, value),
     }));
+  }
+
+  function handleStatusChange(nextStatus: PaymentStatus) {
+    setForm((current) => ({
+      ...current,
+      ...applyStatusChange(nextStatus, current.endDate, todayIsoDate()),
+    }));
+  }
+
+  function onFormFieldEvent(event: React.FormEvent<HTMLFormElement>) {
+    const target = event.target;
+    if (!(target instanceof HTMLInputElement) && !(target instanceof HTMLSelectElement)) {
+      return;
+    }
+    if (target.name === "end_date") {
+      handleEndDateChange(target.value);
+      return;
+    }
+    if (target.name === "status" && isPaymentStatus(target.value)) {
+      handleStatusChange(target.value);
+    }
   }
 
   function validate(): string | null {
@@ -235,7 +248,12 @@ export function QuickEntryDialog({
         className="flex h-dvh max-h-dvh flex-col gap-0 overflow-hidden p-0 md:h-auto md:max-h-[min(90vh,calc(100dvh-2rem))] md:max-w-2xl"
         showCloseButton
       >
-        <form onSubmit={onSubmit} className="flex min-h-0 flex-1 flex-col">
+        <form
+          onSubmit={onSubmit}
+          onChange={onFormFieldEvent}
+          onInput={onFormFieldEvent}
+          className="flex min-h-0 flex-1 flex-col"
+        >
           <div className="min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain p-4 pb-2">
           <DialogHeader className="pr-8">
             <DialogTitle>{editing ? "Редагувати проєкт" : "Швидке додавання"}</DialogTitle>
@@ -285,26 +303,23 @@ export function QuickEntryDialog({
               <div className="flex h-5 items-center">
                 <Label htmlFor="status">Статус</Label>
               </div>
-              <Select
+              <select
+                id="status"
+                name="status"
                 value={form.status}
-                items={STATUS_LABELS}
-                onValueChange={onStatusChange}
+                onChange={(event) => {
+                  if (isPaymentStatus(event.target.value)) {
+                    handleStatusChange(event.target.value);
+                  }
+                }}
+                className="h-8 min-h-11 w-full rounded-lg border border-input bg-transparent px-2.5 py-1 text-base outline-none transition-colors focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 md:min-h-8 md:text-sm dark:bg-input/30"
               >
-                <SelectTrigger id="status" className="w-full">
-                  <SelectValue>
-                    {(value: PaymentStatus | null) =>
-                      value ? STATUS_LABELS[value] : STATUS_LABELS[form.status]
-                    }
-                  </SelectValue>
-                </SelectTrigger>
-                <SelectContent alignItemWithTrigger={false}>
-                  {PAYMENT_STATUSES.map((status) => (
-                    <SelectItem key={status} value={status}>
-                      {STATUS_LABELS[status]}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                {PAYMENT_STATUSES.map((status) => (
+                  <option key={status} value={status}>
+                    {STATUS_LABELS[status]}
+                  </option>
+                ))}
+              </select>
             </div>
             <div className="grid gap-1.5">
               <div className="flex h-5 items-center">
@@ -389,11 +404,13 @@ export function QuickEntryDialog({
               <div className="flex h-5 items-center">
                 <Label htmlFor="endDate">Дата завершення</Label>
               </div>
-              <Input
+              <input
                 id="endDate"
+                name="end_date"
                 type="date"
                 value={form.endDate}
-                onChange={(event) => onEndDateChange(event.target.value)}
+                onChange={(event) => handleEndDateChange(event.target.value)}
+                className="h-8 min-h-11 w-full rounded-lg border border-input bg-transparent px-2.5 py-1 text-base outline-none transition-colors focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 md:min-h-8 md:text-sm dark:bg-input/30"
               />
             </div>
             <div className="grid gap-1.5">

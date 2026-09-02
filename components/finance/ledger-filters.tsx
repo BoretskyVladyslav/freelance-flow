@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useFinance } from "@/components/finance/finance-provider";
 import {
   PLATFORM_FILTER_ITEMS,
@@ -11,11 +11,13 @@ import {
 } from "@/lib/labels";
 import { formatMonthFilterLabel, formatWeekFilterLabel } from "@/lib/format";
 import { monthKeyFromIsoDate, weekKeyFromIsoDate } from "@/lib/week";
+import { isSupabaseConfigured } from "@/lib/supabase/env";
 import {
   PAYMENT_STATUSES,
   PLATFORMS,
   getTransactionStartDate,
 } from "@/types/finance";
+import type { TeamMember } from "@/types/team";
 import {
   Select,
   SelectContent,
@@ -24,8 +26,56 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
+function memberLabel(member: TeamMember): string {
+  return member.fullName.trim() || member.email || member.id;
+}
+
 export function LedgerFilters() {
   const { filters, setFilters, transactions, isAdmin, teamScope, setTeamScope } = useFinance();
+  const [members, setMembers] = useState<TeamMember[]>([]);
+
+  useEffect(() => {
+    if (!isAdmin || !isSupabaseConfigured()) return;
+    let cancelled = false;
+    void fetch("/api/team")
+      .then((response) => response.json())
+      .then((payload: { members?: TeamMember[] }) => {
+        if (!cancelled && Array.isArray(payload.members)) {
+          setMembers(payload.members.filter((member) => member.status !== "disabled"));
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setMembers([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [isAdmin]);
+
+  const employeeOptions = useMemo(() => {
+    const fromMembers = members.map((member) => ({
+      id: member.id,
+      label: memberLabel(member),
+    }));
+    const known = new Set(fromMembers.map((row) => row.id));
+    const fromProjects = Array.from(
+      new Set(
+        transactions
+          .map((row) => row.employeeId)
+          .filter((id): id is string => Boolean(id)),
+      ),
+    )
+      .filter((id) => !known.has(id))
+      .map((id) => ({ id, label: `Працівник ${id.slice(0, 8)}` }));
+    return [...fromMembers, ...fromProjects];
+  }, [members, transactions]);
+
+  const teamItems = useMemo((): Record<string, string> => {
+    return {
+      ...TEAM_SCOPE_ITEMS,
+      ...Object.fromEntries(employeeOptions.map((row) => [row.id, row.label])),
+    };
+  }, [employeeOptions]);
 
   const months = useMemo(() => {
     return Array.from(
@@ -60,16 +110,16 @@ export function LedgerFilters() {
       {isAdmin ? (
         <Select
           value={teamScope}
-          items={TEAM_SCOPE_ITEMS}
+          items={teamItems}
           onValueChange={(value) => {
-            if (value === "all" || value === "personal") setTeamScope(value);
+            if (value) setTeamScope(value);
           }}
         >
         <SelectTrigger aria-label="Охоплення команди" className="min-w-0 max-w-full basis-[calc(50%-0.25rem)] md:min-w-44 md:basis-auto">
             <SelectValue>
               {(value: string | null) =>
-                value && value in TEAM_SCOPE_ITEMS
-                  ? TEAM_SCOPE_ITEMS[value as keyof typeof TEAM_SCOPE_ITEMS]
+                value && value in teamItems
+                  ? teamItems[value]
                   : TEAM_SCOPE_ITEMS.all
               }
             </SelectValue>
@@ -77,6 +127,11 @@ export function LedgerFilters() {
           <SelectContent alignItemWithTrigger={false}>
             <SelectItem value="all">Усі працівники</SelectItem>
             <SelectItem value="personal">Персонально</SelectItem>
+            {employeeOptions.map((row) => (
+              <SelectItem key={row.id} value={row.id}>
+                {row.label}
+              </SelectItem>
+            ))}
           </SelectContent>
         </Select>
       ) : null}
@@ -163,11 +218,16 @@ export function LedgerFilters() {
           value && setFilters((current) => ({ ...current, week: value }))
         }
       >
-        <SelectTrigger aria-label="Фільтр за тижнем" className="min-w-0 max-w-full basis-[calc(50%-0.25rem)] md:min-w-36 md:basis-auto">
+        <SelectTrigger
+          aria-label="Фільтр за тижнем"
+          className="min-w-[200px] max-w-xs basis-[calc(50%-0.25rem)] truncate md:basis-auto"
+        >
           <SelectValue>
-            {(value: string | null) =>
-              !value || value === "all" ? "Всі тижні" : formatWeekFilterLabel(value)
-            }
+            {(value: string | null) => (
+              <span className="block truncate">
+                {!value || value === "all" ? "Всі тижні" : formatWeekFilterLabel(value)}
+              </span>
+            )}
           </SelectValue>
         </SelectTrigger>
         <SelectContent alignItemWithTrigger={false}>

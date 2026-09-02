@@ -82,10 +82,19 @@ export const supabaseProjectsRepository = {
   async load(): Promise<FinanceSnapshot> {
     const local = await loadSnapshot();
     const supabase = createBrowserSupabaseClient();
-    const { data, error } = await supabase
-      .from("projects")
-      .select("*")
-      .order("date", { ascending: false });
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    let query = supabase.from("projects").select("*").order("date", { ascending: false });
+    if (user) {
+      const profile = await supabase.from("profiles").select("role").eq("id", user.id).maybeSingle();
+      if (profile.data?.role !== "admin") {
+        query = query.eq("employee_id", user.id);
+      }
+    }
+
+    const { data, error } = await query;
 
     if (error) {
       throw new Error(error.message);
