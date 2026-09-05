@@ -70,9 +70,11 @@ export function MetricCards() {
     },
     {
       key: "opex",
-      title: "Операційні витрати",
+      title: isAdmin ? "Операційні витрати" : "Персональні витрати",
       value: formatMoney(totalExpensesInDisplay, displayCurrency),
-      description: "Підписки, хостинг та інструменти команди за вибраний період.",
+      description: isAdmin && teamScope === "all"
+        ? "Підписки, хостинг та інструменти команди за вибраний період."
+        : "Витрати та підписки за вибраний період.",
       icon: Receipt,
       iconClass: "text-rose-600 dark:text-rose-400",
       valueClass: "text-rose-600 dark:text-rose-400",
@@ -81,7 +83,9 @@ export function MetricCards() {
       key: "net",
       title: "Чистий дохід до виплати (Net)",
       value: formatMoney(trueNetPayout, displayCurrency),
-      description: `True Net Profit (після OpEx). До виплати: ${formatMoney(displayTotals.remainingToBePaid, displayCurrency)}`,
+      description: isAdmin && teamScope === "all"
+        ? `True Net Profit (після OpEx). До виплати: ${formatMoney(displayTotals.remainingToBePaid, displayCurrency)}`
+        : `Чистий дохід за вашими проєктами. До виплати: ${formatMoney(displayTotals.remainingToBePaid, displayCurrency)}`,
       icon: Wallet,
       valueClass: "text-emerald-600 dark:text-emerald-400",
     },

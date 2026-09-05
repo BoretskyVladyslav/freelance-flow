@@ -113,6 +113,7 @@ export type Database = {
           amount: number;
           currency: string;
           expense_date: string;
+          employee_id: string | null;
           created_at: string;
         };
         Insert: {
@@ -121,6 +122,7 @@ export type Database = {
           amount: number;
           currency?: string;
           expense_date?: string;
+          employee_id?: string | null;
           created_at?: string;
         };
         Update: {
@@ -129,6 +131,7 @@ export type Database = {
           amount?: number;
           currency?: string;
           expense_date?: string;
+          employee_id?: string | null;
           created_at?: string;
         };
         Relationships: [];

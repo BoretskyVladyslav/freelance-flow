@@ -30,7 +30,7 @@ import Decimal from "decimal.js";
 import { convertToDisplay, moneyNumber } from "@/lib/tax-calculator";
 import { getExpenses, addExpense, deleteExpense } from "@/services/supabase-expenses";
 import { isoWeekFromIsoDate, monthKeyFromIsoDate, weekKeyFromIsoDate } from "@/lib/week";
-import { scopeTeamTransactions } from "@/lib/team-scope";
+import { scopeTeamExpenses, scopeTeamTransactions } from "@/lib/team-scope";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { createBrowserSupabaseClient } from "@/lib/supabase/client";
 import {
@@ -167,8 +167,13 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
         }
 
         setCurrentUserId(user.id);
-        setRole(profile.data.role);
-        if (profile.data.role !== "admin") {
+        const resolvedRole: UserRole =
+          (profile.data?.role as UserRole) ||
+          (user.user_metadata?.role as UserRole) ||
+          (user.app_metadata?.role as UserRole) ||
+          "employee";
+        setRole(resolvedRole);
+        if (resolvedRole !== "admin") {
           setTeamScopeState("personal");
           setEmployeeView(null);
         }
@@ -204,6 +209,11 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
 
   const isAdmin = role === "admin";
   const setTeamScope = useCallback((scope: TeamScope, label?: string) => {
+    if (!isAdmin) {
+      setTeamScopeState("personal");
+      setEmployeeView(null);
+      return;
+    }
     setTeamScopeState(scope);
     if (scope === "all" || scope === "personal") {
       setEmployeeView(null);
@@ -213,7 +223,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
       id: scope,
       label: (label ?? "").trim() || scope,
     });
-  }, []);
+  }, [isAdmin]);
 
   const viewEmployee = useCallback((id: string, label: string) => {
     setTeamScope(id, label);
@@ -264,8 +274,18 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     void reloadExpenses();
   }, [reloadExpenses]);
 
+  const scopedExpenses = useMemo(
+    () =>
+      scopeTeamExpenses(expenses, {
+        isAdmin,
+        currentUserId,
+        teamScope,
+      }),
+    [currentUserId, expenses, isAdmin, teamScope],
+  );
+
   const filteredExpenses = useMemo(() => {
-    return expenses.filter((e) => {
+    return scopedExpenses.filter((e) => {
       if (filters.month !== "all") {
         if (monthKeyFromIsoDate(e.expense_date) !== filters.month) return false;
       }
@@ -274,7 +294,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
       }
       return true;
     });
-  }, [expenses, filters.month, filters.week]);
+  }, [filters.month, filters.week, scopedExpenses]);
 
   const totalExpensesInDisplay = useMemo(() => {
     const totalEur = filteredExpenses.reduce((acc, e) => {
@@ -297,10 +317,17 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     [],
   );
 
-  const deleteExpenseItem = useCallback(async (id: string) => {
-    await deleteExpense(id);
-    setExpenses((prev) => prev.filter((e) => e.id !== id));
-  }, []);
+  const deleteExpenseItem = useCallback(
+    async (id: string) => {
+      if (!isAdmin) {
+        toast.error("Лише адміністратор може видаляти витрати.");
+        return;
+      }
+      await deleteExpense(id);
+      setExpenses((prev) => prev.filter((e) => e.id !== id));
+    },
+    [isAdmin],
+  );
 
   const addTransaction = useCallback(
     (
@@ -310,6 +337,9 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     ) => {
       const exchangeRateAtCreation =
         input.exchangeRateAtCreation ?? resolveRate(input.currency, exchange.rates);
+      const employeeId = isAdmin
+        ? input.employeeId ?? (currentUserId || undefined)
+        : (currentUserId || undefined);
       const next: Transaction = {
         ...input,
         id: createId(),
@@ -317,7 +347,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
         exchangeRateAtCreation,
         title: input.title.trim(),
         notes: input.notes?.trim() ? input.notes.trim() : undefined,
-        employeeId: input.employeeId ?? (currentUserId || undefined),
+        employeeId,
         createdBy: input.createdBy ?? (currentUserId || undefined),
       };
       setSnapshot((current) => ({
@@ -325,7 +355,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
         transactions: [next, ...current.transactions],
       }));
     },
-    [currentUserId, exchange.rates],
+    [currentUserId, exchange.rates, isAdmin],
   );
 
   const updateTransaction = useCallback((id: string, patch: Partial<Omit<Transaction, "id">>) => {
@@ -334,6 +364,9 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
       transactions: current.transactions.map((transaction) => {
         if (transaction.id !== id) return transaction;
         const merged = { ...transaction, ...patch };
+        if (!isAdmin && currentUserId) {
+          merged.employeeId = currentUserId;
+        }
         if (patch.startDate || patch.date) {
           merged.weekNumber = isoWeekFromIsoDate(
             patch.startDate || patch.date || transaction.startDate || transaction.date,
@@ -346,14 +379,18 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
         };
       }),
     }));
-  }, []);
+  }, [currentUserId, isAdmin]);
 
   const deleteTransaction = useCallback((id: string) => {
+    if (!isAdmin) {
+      toast.error("Лише адміністратор може видаляти проєкти.");
+      return;
+    }
     setSnapshot((current) => ({
       ...current,
       transactions: current.transactions.filter((transaction) => transaction.id !== id),
     }));
-  }, []);
+  }, [isAdmin]);
 
   const setDisplayCurrency = useCallback((currency: Currency) => {
     setSnapshot((current) => ({ ...current, displayCurrency: currency }));

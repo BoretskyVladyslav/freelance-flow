@@ -84,7 +84,7 @@ const RowActions = memo(function RowActions({
   onEdit: (transaction: Transaction) => void;
   onDelete: (transaction: Transaction) => void;
 }) {
-  const { updateTransaction } = useFinance();
+  const { updateTransaction, isAdmin } = useFinance();
   const [open, setOpen] = useState(false);
 
   return (
@@ -126,16 +126,20 @@ const RowActions = memo(function RowActions({
             {STATUS_LABELS[status]}
           </DropdownMenuItem>
         ))}
-        <DropdownMenuSeparator />
-        <DropdownMenuItem
-          variant="destructive"
-          onClick={() => {
-            setOpen(false);
-            onDelete(row);
-          }}
-        >
-          Видалити
-        </DropdownMenuItem>
+        {isAdmin ? (
+          <>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              variant="destructive"
+              onClick={() => {
+                setOpen(false);
+                onDelete(row);
+              }}
+            >
+              Видалити
+            </DropdownMenuItem>
+          </>
+        ) : null}
       </DropdownMenuContent>
     </DropdownMenu>
   );

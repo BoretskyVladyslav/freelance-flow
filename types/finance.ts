@@ -47,6 +47,7 @@ export type Expense = {
   amount: number;
   currency: Currency;
   expense_date: string;
+  employee_id?: string | null;
   created_at?: string;
 };
 

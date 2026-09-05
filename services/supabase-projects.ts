@@ -92,7 +92,8 @@ export const supabaseProjectsRepository = {
     let query = supabase.from("projects").select("*").order("date", { ascending: false });
     if (user) {
       const profile = await supabase.from("profiles").select("role").eq("id", user.id).maybeSingle();
-      if (profile.data?.role !== "admin") {
+      const role = profile.data?.role || user.user_metadata?.role || user.app_metadata?.role;
+      if (role !== "admin") {
         query = query.eq("employee_id", user.id);
       }
     }
@@ -124,13 +125,21 @@ export const supabaseProjectsRepository = {
       throw new Error("Потрібна автентифікація для збереження проєктів.");
     }
 
-    const { data: existing, error: existingError } = await supabase.from("projects").select("id");
+    const profile = await supabase.from("profiles").select("role").eq("id", user.id).maybeSingle();
+    const role = profile.data?.role || user.user_metadata?.role || user.app_metadata?.role;
+    const isAdmin = role === "admin";
+
+    let existingQuery = supabase.from("projects").select("id");
+    if (!isAdmin) {
+      existingQuery = existingQuery.eq("employee_id", user.id);
+    }
+    const { data: existing, error: existingError } = await existingQuery;
     if (existingError) {
       throw new Error(existingError.message);
     }
 
     const existingIds = (existing ?? []).map((row) => row.id);
-    if (snapshot.transactions.length === 0 && existingIds.length > 0) {
+    if (snapshot.transactions.length === 0 && existingIds.length > 0 && !isAdmin) {
       await savePreferences({
         lastKnownRates: snapshot.lastKnownRates,
         displayCurrency: snapshot.displayCurrency,
@@ -140,15 +149,19 @@ export const supabaseProjectsRepository = {
 
     const keepIds = new Set(snapshot.transactions.map((row) => row.id));
     const toDelete = existingIds.filter((id) => !keepIds.has(id));
-    if (toDelete.length > 0) {
+    if (isAdmin && toDelete.length > 0) {
       const { error: deleteError } = await supabase.from("projects").delete().in("id", toDelete);
       if (deleteError) throw new Error(deleteError.message);
     }
 
     if (snapshot.transactions.length > 0) {
-      const rows = snapshot.transactions.map((transaction) =>
-        transactionToRow(transaction, user.id),
-      );
+      const rows = snapshot.transactions.map((transaction) => {
+        const row = transactionToRow(transaction, user.id);
+        if (!isAdmin) {
+          row.employee_id = user.id;
+        }
+        return row;
+      });
       const { error: upsertError } = await supabase.from("projects").upsert(rows, { onConflict: "id" });
       if (upsertError) throw new Error(upsertError.message);
     }
