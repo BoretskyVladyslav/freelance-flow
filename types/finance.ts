@@ -41,6 +41,15 @@ export type Transaction = {
 
 export type Project = Transaction;
 
+export type Expense = {
+  id: string;
+  title: string;
+  amount: number;
+  currency: Currency;
+  expense_date: string;
+  created_at?: string;
+};
+
 export type TaxBreakdown = {
   grossInBase: number;
   feeInBase: number;

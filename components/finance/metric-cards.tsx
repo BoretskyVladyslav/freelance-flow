@@ -3,6 +3,7 @@
 import {
   Building2,
   Landmark,
+  Receipt,
   TrendingDown,
   TrendingUp,
   Wallet,
@@ -14,7 +15,15 @@ import { formatMoney, formatSignedMoney } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
 export function MetricCards() {
-  const { displayTotals, displayCurrency, hydrated, isAdmin, teamScope } = useFinance();
+  const {
+    displayTotals,
+    displayCurrency,
+    hydrated,
+    isAdmin,
+    teamScope,
+    totalExpensesInDisplay,
+    trueNetPayout,
+  } = useFinance();
   const gain = displayTotals.currencyGainLoss;
   const gainNegative = gain < 0;
 
@@ -55,10 +64,19 @@ export function MetricCards() {
       valueClass: "text-rose-600 dark:text-rose-400",
     },
     {
+      key: "opex",
+      title: "Операційні витрати",
+      value: formatMoney(totalExpensesInDisplay, displayCurrency),
+      description: "Підписки, хостинг та інструменти команди за вибраний період.",
+      icon: Receipt,
+      iconClass: "text-rose-600 dark:text-rose-400",
+      valueClass: "text-rose-600 dark:text-rose-400",
+    },
+    {
       key: "net",
       title: "Чистий дохід до виплати (Net)",
-      value: formatMoney(displayTotals.netPayout, displayCurrency),
-      description: `Залишилось до виплати: ${formatMoney(displayTotals.remainingToBePaid, displayCurrency)}`,
+      value: formatMoney(trueNetPayout, displayCurrency),
+      description: `True Net Profit (після OpEx). До виплати: ${formatMoney(displayTotals.remainingToBePaid, displayCurrency)}`,
       icon: Wallet,
       valueClass: "text-emerald-600 dark:text-emerald-400",
     },
@@ -78,7 +96,7 @@ export function MetricCards() {
     <section
       aria-live="polite"
       aria-atomic="true"
-      className="grid min-w-0 grid-cols-2 items-stretch gap-3 md:gap-4 xl:grid-cols-5"
+      className="grid min-w-0 grid-cols-2 items-stretch gap-3 md:gap-4 xl:grid-cols-6"
     >
       {cards.map((card) => (
         <Card

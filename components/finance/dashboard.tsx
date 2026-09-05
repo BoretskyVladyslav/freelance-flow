@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Plus, RefreshCw } from "lucide-react";
+import { Plus, RefreshCw, Receipt } from "lucide-react";
 import { LogoutButton } from "@/components/auth/logout-button";
 import { CloudMigrationBanner } from "@/components/finance/cloud-migration-banner";
 import { BackupControls, MoreToolsDropdown } from "@/components/finance/backup-controls";
@@ -14,6 +14,7 @@ import { PdfReportButton } from "@/components/finance/pdf-report-button";
 import { QuickEntryDialog } from "@/components/finance/quick-entry-dialog";
 import { WeeklyChart } from "@/components/finance/weekly-chart";
 import { PayoutWidget } from "@/components/PayoutWidget";
+import { ExpenseModal } from "@/components/ExpenseModal";
 import { TeamPanel } from "@/components/team/team-panel";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { Button } from "@/components/ui/button";
@@ -34,9 +35,11 @@ export function Dashboard() {
     isAdmin,
     employeeView,
     clearEmployeeView,
+    reloadExpenses,
   } = useFinance();
   const mounted = useMounted();
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isExpenseModalOpen, setIsExpenseModalOpen] = useState(false);
   const [selectedProject, setSelectedProject] = useState<Transaction | null>(null);
 
   function openNewProject() {
@@ -86,11 +89,22 @@ export function Dashboard() {
           </div>
           <div className="flex items-center justify-between gap-2">
             <MoreToolsDropdown />
-            <Button type="button" onClick={openNewProject} className="h-11 px-3 md:h-8 md:px-2.5">
-              <Plus />
-              <span className="hidden min-[380px]:inline">Додати проєкт</span>
-              <span className="sr-only min-[380px]:hidden">Додати проєкт</span>
-            </Button>
+            <div className="flex items-center gap-1.5">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setIsExpenseModalOpen(true)}
+                className="h-11 px-2.5 text-rose-600 hover:bg-rose-50 hover:text-rose-700 md:h-8 md:px-2.5 dark:text-rose-400 dark:hover:bg-rose-950/40"
+              >
+                <Receipt className="h-4 w-4" />
+                <span className="hidden min-[380px]:inline">Витрата</span>
+              </Button>
+              <Button type="button" onClick={openNewProject} className="h-11 px-3 md:h-8 md:px-2.5">
+                <Plus />
+                <span className="hidden min-[380px]:inline">Додати проєкт</span>
+                <span className="sr-only min-[380px]:hidden">Додати проєкт</span>
+              </Button>
+            </div>
           </div>
         </div>
 
@@ -109,6 +123,15 @@ export function Dashboard() {
           <PdfReportButton />
           <BackupControls />
           <LogoutButton />
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => setIsExpenseModalOpen(true)}
+            className="text-rose-600 hover:bg-rose-50 hover:text-rose-700 dark:text-rose-400 dark:hover:bg-rose-950/40"
+          >
+            <Receipt className="h-4 w-4" />
+            Додати витрату
+          </Button>
           <Button type="button" onClick={openNewProject}>
             <Plus />
             Додати проєкт
@@ -192,6 +215,13 @@ export function Dashboard() {
           if (!open) setSelectedProject(null);
         }}
         transaction={selectedProject}
+      />
+
+      <ExpenseModal
+        open={isExpenseModalOpen}
+        onOpenChange={setIsExpenseModalOpen}
+        onExpenseAdded={reloadExpenses}
+        defaultCurrency={displayCurrency}
       />
     </main>
   );

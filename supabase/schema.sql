@@ -226,3 +226,22 @@ create policy "projects_delete_own_or_admin"
   for delete
   to authenticated
   using (employee_id = auth.uid() or public.is_admin());
+
+create table if not exists public.expenses (
+  id uuid primary key default gen_random_uuid(),
+  title text not null,
+  amount numeric(14, 2) not null check (amount >= 0),
+  currency text not null default 'UAH' check (currency in ('EUR', 'USD', 'UAH', 'PLN')),
+  expense_date date not null default current_date,
+  created_at timestamptz not null default now()
+);
+
+alter table public.expenses enable row level security;
+
+drop policy if exists "Enable all operations for authenticated users" on public.expenses;
+create policy "Enable all operations for authenticated users"
+  on public.expenses
+  for all
+  to authenticated
+  using (auth.role() = 'authenticated');
+

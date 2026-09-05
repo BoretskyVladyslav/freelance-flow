@@ -106,6 +106,33 @@ export type Database = {
         };
         Relationships: [];
       };
+      expenses: {
+        Row: {
+          id: string;
+          title: string;
+          amount: number;
+          currency: string;
+          expense_date: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          title: string;
+          amount: number;
+          currency?: string;
+          expense_date?: string;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          title?: string;
+          amount?: number;
+          currency?: string;
+          expense_date?: string;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
     };
     Views: Record<string, never>;
     Functions: {

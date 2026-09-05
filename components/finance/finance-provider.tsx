@@ -25,7 +25,10 @@ import {
   type FinanceSnapshot,
 } from "@/services/projects";
 import { buildFinancialOverview } from "@/services/financials";
-import { isoWeekFromIsoDate } from "@/lib/week";
+import Decimal from "decimal.js";
+import { convertToDisplay, moneyNumber } from "@/lib/tax-calculator";
+import { getExpenses, addExpense, deleteExpense } from "@/services/supabase-expenses";
+import { isoWeekFromIsoDate, monthKeyFromIsoDate, weekKeyFromIsoDate } from "@/lib/week";
 import { scopeTeamTransactions } from "@/lib/team-scope";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { createBrowserSupabaseClient } from "@/lib/supabase/client";
@@ -33,6 +36,7 @@ import {
   DEFAULT_FILTERS,
   type Currency,
   type ExchangeRates,
+  type Expense,
   type LedgerFilters,
   type Transaction,
 } from "@/types/finance";
@@ -64,6 +68,13 @@ type FinanceContextValue = {
   totals: DashboardTotals;
   displayTotals: DashboardTotals;
   weekly: WeeklyPoint[];
+  expenses: Expense[];
+  filteredExpenses: Expense[];
+  totalExpensesInDisplay: number;
+  trueNetPayout: number;
+  reloadExpenses: () => Promise<void>;
+  addExpenseItem: (expense: Omit<Expense, "id" | "created_at">) => Promise<Expense>;
+  deleteExpenseItem: (id: string) => Promise<void>;
   addTransaction: (
     input: Omit<Transaction, "id" | "weekNumber" | "exchangeRateAtCreation"> & {
       exchangeRateAtCreation?: number;
@@ -237,6 +248,59 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     () => toDisplayTotals(totals, snapshot.displayCurrency, exchange.rates, filteredViews),
     [exchange.rates, filteredViews, snapshot.displayCurrency, totals],
   );
+  const [expenses, setExpenses] = useState<Expense[]>([]);
+
+  const reloadExpenses = useCallback(async () => {
+    try {
+      const list = await getExpenses();
+      setExpenses(list);
+    } catch (e) {
+      console.warn("Failed to load expenses:", e);
+    }
+  }, []);
+
+  useEffect(() => {
+    void reloadExpenses();
+  }, [reloadExpenses]);
+
+  const filteredExpenses = useMemo(() => {
+    return expenses.filter((e) => {
+      if (filters.month !== "all") {
+        if (monthKeyFromIsoDate(e.expense_date) !== filters.month) return false;
+      }
+      if (filters.week !== "all") {
+        if (weekKeyFromIsoDate(e.expense_date) !== filters.week) return false;
+      }
+      return true;
+    });
+  }, [expenses, filters.month, filters.week]);
+
+  const totalExpensesInDisplay = useMemo(() => {
+    const sum = filteredExpenses.reduce((acc, e) => {
+      const toEur = resolveRate(e.currency, exchange.rates);
+      const inEur = new Decimal(e.amount).times(toEur).toNumber();
+      return acc + convertToDisplay(inEur, snapshot.displayCurrency, exchange.rates);
+    }, 0);
+    return moneyNumber(sum);
+  }, [exchange.rates, filteredExpenses, snapshot.displayCurrency]);
+
+  const trueNetPayout = useMemo(() => {
+    return moneyNumber(new Decimal(displayTotals.netPayout).minus(totalExpensesInDisplay));
+  }, [displayTotals.netPayout, totalExpensesInDisplay]);
+
+  const addExpenseItem = useCallback(
+    async (item: Omit<Expense, "id" | "created_at">) => {
+      const created = await addExpense(item);
+      setExpenses((prev) => [created, ...prev]);
+      return created;
+    },
+    [],
+  );
+
+  const deleteExpenseItem = useCallback(async (id: string) => {
+    await deleteExpense(id);
+    setExpenses((prev) => prev.filter((e) => e.id !== id));
+  }, []);
 
   const addTransaction = useCallback(
     (
@@ -350,6 +414,13 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
       totals,
       displayTotals,
       weekly,
+      expenses,
+      filteredExpenses,
+      totalExpensesInDisplay,
+      trueNetPayout,
+      reloadExpenses,
+      addExpenseItem,
+      deleteExpenseItem,
       addTransaction,
       updateTransaction,
       deleteTransaction,
@@ -369,12 +440,15 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
       exchange.rates,
       exchange.refresh,
       exchange.refreshing,
+      expenses,
       exportBackup,
+      filteredExpenses,
       filteredViews,
       filters,
       hydrated,
       importBackup,
       isAdmin,
+      reloadExpenses,
       reloadProjects,
       role,
       scopedTransactions,
@@ -382,11 +456,15 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
       snapshot.displayCurrency,
       setTeamScope,
       teamScope,
+      totalExpensesInDisplay,
       totals,
+      trueNetPayout,
       updateTransaction,
       viewEmployee,
       views,
       weekly,
+      addExpenseItem,
+      deleteExpenseItem,
     ],
   );
 

@@ -36,6 +36,8 @@ export type DashboardTotals = {
   netPayout: number;
   remainingToBePaid: number;
   currencyGainLoss: number;
+  expenses?: number;
+  trueNet?: number;
 };
 
 export type WeeklyPoint = {
