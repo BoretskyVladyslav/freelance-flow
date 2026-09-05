@@ -34,6 +34,8 @@ export type Transaction = {
   notes?: string;
   employeeId?: string;
   createdBy?: string;
+  withdrawn?: boolean;
+  net_amount?: number;
 };
 
 export type Project = Transaction;

@@ -59,6 +59,7 @@ create table if not exists public.projects (
     check (status in ('Pending', 'Paid', 'In Progress')),
   week_number integer not null check (week_number between 1 and 53),
   notes text,
+  withdrawn boolean not null default false,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );

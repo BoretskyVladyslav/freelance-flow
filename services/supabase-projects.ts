@@ -52,6 +52,7 @@ function rowToTransaction(row: ProjectRow): Transaction | null {
     notes: row.notes ?? undefined,
     employeeId: row.employee_id,
     createdBy: row.created_by ?? undefined,
+    withdrawn: Boolean(row.withdrawn),
   };
 }
 
@@ -75,6 +76,7 @@ export function transactionToRow(transaction: Transaction, userId: string): Proj
     status: transaction.status,
     week_number: transaction.weekNumber,
     notes: transaction.notes ?? null,
+    withdrawn: transaction.withdrawn ?? false,
   };
 }
 

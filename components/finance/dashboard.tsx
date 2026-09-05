@@ -13,6 +13,7 @@ import { MetricCards } from "@/components/finance/metric-cards";
 import { PdfReportButton } from "@/components/finance/pdf-report-button";
 import { QuickEntryDialog } from "@/components/finance/quick-entry-dialog";
 import { WeeklyChart } from "@/components/finance/weekly-chart";
+import { PayoutWidget } from "@/components/PayoutWidget";
 import { TeamPanel } from "@/components/team/team-panel";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { Button } from "@/components/ui/button";
@@ -163,6 +164,8 @@ export function Dashboard() {
       ) : null}
       <MetricCards />
       <WeeklyChart />
+
+      <PayoutWidget />
 
       <Card className="min-w-0 overflow-visible">
         <CardHeader className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
