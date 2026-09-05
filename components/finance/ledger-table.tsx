@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { memo, useState } from "react";
 import { MoreHorizontal } from "lucide-react";
 import {
   AlertDialog,
@@ -75,7 +75,7 @@ type LedgerTableProps = {
   onEdit: (transaction: Transaction) => void;
 };
 
-function RowActions({
+const RowActions = memo(function RowActions({
   row,
   onEdit,
   onDelete,
@@ -139,9 +139,9 @@ function RowActions({
       </DropdownMenuContent>
     </DropdownMenu>
   );
-}
+});
 
-function TaxDetails({ row }: { row: TransactionView }) {
+const TaxDetails = memo(function TaxDetails({ row }: { row: TransactionView }) {
   const { displayCurrency, rates } = useFinance();
   const totalTaxEur = moneyNumber(row.breakdown.spainTax + row.breakdown.companyTax);
   const totalTaxDisplay = convertToDisplay(totalTaxEur, displayCurrency, rates);
@@ -167,7 +167,7 @@ function TaxDetails({ row }: { row: TransactionView }) {
       <TooltipContent className="max-w-xs text-left">{summary}</TooltipContent>
     </Tooltip>
   );
-}
+});
 
 export function LedgerTable({ onEdit }: LedgerTableProps) {
   const { filteredViews, displayCurrency, rates, deleteTransaction, hydrated } = useFinance();
@@ -221,7 +221,7 @@ export function LedgerTable({ onEdit }: LedgerTableProps) {
                 <RowActions
                   row={row}
                   onEdit={onEdit}
-                  onDelete={(transaction) => setPendingDelete(transaction)}
+                  onDelete={setPendingDelete}
                 />
               </div>
               <div className="grid grid-cols-2 gap-3 text-sm">
@@ -348,7 +348,7 @@ export function LedgerTable({ onEdit }: LedgerTableProps) {
                 <RowActions
                   row={row}
                   onEdit={onEdit}
-                  onDelete={(transaction) => setPendingDelete(transaction)}
+                  onDelete={setPendingDelete}
                 />
               </TableCell>
             </TableRow>

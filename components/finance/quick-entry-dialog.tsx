@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { CircleHelp, User } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -151,32 +151,35 @@ export function QuickEntryDialog({
     [form.currency, lockedRate, rates],
   );
 
-  function formatPreviewAmount(amountEur: number): string {
-    return formatMoney(
-      convertToDisplay(amountEur, form.currency, previewRates),
-      form.currency,
-    );
-  }
+  const formatPreviewAmount = useCallback(
+    (amountEur: number): string => {
+      return formatMoney(
+        convertToDisplay(amountEur, form.currency, previewRates),
+        form.currency,
+      );
+    },
+    [form.currency, previewRates],
+  );
 
-  function setField<K extends keyof FormState>(key: K, value: FormState[K]) {
+  const setField = useCallback(<K extends keyof FormState>(key: K, value: FormState[K]) => {
     setForm((current) => ({ ...current, [key]: value }));
-  }
+  }, []);
 
-  function handleEndDateChange(value: string) {
+  const handleEndDateChange = useCallback((value: string) => {
     setForm((current) => ({
       ...current,
       ...applyEndDateChange(current.status, value),
     }));
-  }
+  }, []);
 
-  function handleStatusChange(nextStatus: PaymentStatus) {
+  const handleStatusChange = useCallback((nextStatus: PaymentStatus) => {
     setForm((current) => ({
       ...current,
       ...applyStatusChange(nextStatus, current.endDate, todayIsoDate()),
     }));
-  }
+  }, []);
 
-  function onFormFieldEvent(event: React.FormEvent<HTMLFormElement>) {
+  const onFormFieldEvent = useCallback((event: React.FormEvent<HTMLFormElement>) => {
     const target = event.target;
     if (!(target instanceof HTMLInputElement) && !(target instanceof HTMLSelectElement)) {
       return;
@@ -188,9 +191,9 @@ export function QuickEntryDialog({
     if (target.name === "status" && isPaymentStatus(target.value)) {
       handleStatusChange(target.value);
     }
-  }
+  }, [handleEndDateChange, handleStatusChange]);
 
-  function validate(): string | null {
+  const validate = useCallback((): string | null => {
     if (!form.title.trim()) return "Назва проєкту обовʼязкова.";
     if (!Number.isFinite(grossAmount) || grossAmount <= 0) {
       return "Сума Gross має бути більшою за 0.";
@@ -207,9 +210,9 @@ export function QuickEntryDialog({
       return "Дата виплати не може бути раніше дати початку.";
     }
     return null;
-  }
+  }, [customFee, form.endDate, form.payoutDate, form.startDate, form.title, grossAmount]);
 
-  function onSubmit(event: React.FormEvent) {
+  const onSubmit = useCallback((event: React.FormEvent) => {
     event.preventDefault();
     const error = validate();
     if (error) {
@@ -246,7 +249,25 @@ export function QuickEntryDialog({
       toast.success("Проєкт додано.");
     }
     onOpenChange(false);
-  }
+  }, [
+    addTransaction,
+    form.clientName,
+    form.currency,
+    form.endDate,
+    form.notes,
+    form.payoutDate,
+    form.platform,
+    form.startDate,
+    form.status,
+    form.title,
+    grossAmount,
+    customFee,
+    lockedRate,
+    onOpenChange,
+    transaction,
+    updateTransaction,
+    validate,
+  ]);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>

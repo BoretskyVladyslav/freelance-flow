@@ -57,6 +57,10 @@ const EMPTY_FORM: FormState = {
   role: "employee",
 };
 
+function memberLabel(member: TeamMember): string {
+  return member.fullName.trim() || member.email;
+}
+
 export function TeamPanel() {
   const { viewEmployee } = useFinance();
   const [members, setMembers] = useState<TeamMember[]>([]);
@@ -111,16 +115,15 @@ export function TeamPanel() {
     }
   }
 
-  function memberLabel(member: TeamMember): string {
-    return member.fullName.trim() || member.email;
-  }
-
-  function onViewProjects(member: TeamMember) {
-    viewEmployee(member.id, memberLabel(member));
-    document
-      .getElementById("financial-overview")
-      ?.scrollIntoView({ behavior: "smooth", block: "start" });
-  }
+  const onViewProjects = useCallback(
+    (member: TeamMember) => {
+      viewEmployee(member.id, memberLabel(member));
+      document
+        .getElementById("financial-overview")
+        ?.scrollIntoView({ behavior: "smooth", block: "start" });
+    },
+    [viewEmployee],
+  );
 
   return (
     <Card className="min-w-0 overflow-x-hidden print:hidden">
@@ -141,7 +144,7 @@ export function TeamPanel() {
               {members.map((member) => (
                 <div
                   key={member.id}
-                  className="rounded-xl bg-card p-3 ring-1 ring-foreground/10"
+                  className="rounded-xl border border-slate-200/80 bg-card p-4 shadow-sm dark:border-slate-800"
                 >
                   <div className="mb-1 flex items-start justify-between gap-2">
                     <p className="min-w-0 truncate font-medium">{member.fullName || "—"}</p>

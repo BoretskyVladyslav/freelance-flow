@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { Wallet, ArrowRightCircle, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -57,7 +57,7 @@ export function PayoutWidget({
   const mounted = useMounted();
   const [isWithdrawing, setIsWithdrawing] = useState(false);
 
-  const activeProjects = propProjects ?? finance.transactions;
+  const activeProjects = propProjects ?? finance.views;
   const rates = finance.rates;
   const effectiveEmployeeId =
     propEmployeeId ??
@@ -78,7 +78,7 @@ export function PayoutWidget({
 
   const progressPercentage = Math.min((pendingAmount / GOAL_AMOUNT) * 100, 100);
 
-  const handlePayout = async () => {
+  const handlePayout = useCallback(async () => {
     if (pendingAmount === 0 || isWithdrawing) return;
 
     setIsWithdrawing(true);
@@ -124,12 +124,12 @@ export function PayoutWidget({
     } finally {
       setIsWithdrawing(false);
     }
-  };
+  }, [activeProjects, effectiveEmployeeId, finance, isWithdrawing, mutate, onRefresh, pendingAmount]);
 
   return (
     <Card
       className={cn(
-        "min-w-0 overflow-hidden border border-slate-200 bg-gradient-to-br from-white via-slate-50/60 to-emerald-50/40 shadow-sm transition-all dark:border-slate-800 dark:from-slate-900 dark:via-slate-900/90 dark:to-emerald-950/20",
+        "min-w-0 overflow-hidden border border-slate-200/80 bg-gradient-to-br from-white via-slate-50/60 to-emerald-50/40 shadow-sm transition-all dark:border-slate-800 dark:from-slate-900 dark:via-slate-900/90 dark:to-emerald-950/20",
         className,
       )}
     >

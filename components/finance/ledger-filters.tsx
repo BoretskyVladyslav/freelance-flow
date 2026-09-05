@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useFinance } from "@/components/finance/finance-provider";
 import {
   PLATFORM_FILTER_ITEMS,
@@ -105,15 +105,56 @@ export function LedgerFilters() {
     [weeks],
   );
 
+  const handleTeamScopeChange = useCallback(
+    (value: string | null) => {
+      if (value) setTeamScope(value, teamItems[value]);
+    },
+    [setTeamScope, teamItems],
+  );
+
+  const handlePlatformChange = useCallback(
+    (value: string | null) => {
+      if (value) {
+        setFilters((current) => ({ ...current, platform: value as typeof current.platform }));
+      }
+    },
+    [setFilters],
+  );
+
+  const handleStatusChange = useCallback(
+    (value: string | null) => {
+      if (value) {
+        setFilters((current) => ({ ...current, status: value as typeof current.status }));
+      }
+    },
+    [setFilters],
+  );
+
+  const handleMonthChange = useCallback(
+    (value: string | null) => {
+      if (value) {
+        setFilters((current) => ({ ...current, month: value }));
+      }
+    },
+    [setFilters],
+  );
+
+  const handleWeekChange = useCallback(
+    (value: string | null) => {
+      if (value) {
+        setFilters((current) => ({ ...current, week: value }));
+      }
+    },
+    [setFilters],
+  );
+
   return (
     <div className="flex w-full min-w-0 flex-wrap items-center gap-2 print:hidden">
       {isAdmin ? (
         <Select
           value={teamScope}
           items={teamItems}
-          onValueChange={(value) => {
-            if (value) setTeamScope(value, teamItems[value]);
-          }}
+          onValueChange={handleTeamScopeChange}
         >
         <SelectTrigger aria-label="Охоплення команди" className="min-w-0 max-w-full basis-[calc(50%-0.25rem)] md:min-w-44 md:basis-auto">
             <SelectValue>
@@ -138,9 +179,7 @@ export function LedgerFilters() {
       <Select
         value={filters.platform}
         items={PLATFORM_FILTER_ITEMS}
-        onValueChange={(value) =>
-          value && setFilters((current) => ({ ...current, platform: value as typeof current.platform }))
-        }
+        onValueChange={handlePlatformChange}
       >
         <SelectTrigger aria-label="Фільтр за платформою" className="min-w-0 max-w-full basis-[calc(50%-0.25rem)] md:min-w-40 md:basis-auto">
           <SelectValue>
@@ -164,9 +203,7 @@ export function LedgerFilters() {
       <Select
         value={filters.status}
         items={STATUS_FILTER_ITEMS}
-        onValueChange={(value) =>
-          value && setFilters((current) => ({ ...current, status: value as typeof current.status }))
-        }
+        onValueChange={handleStatusChange}
       >
         <SelectTrigger aria-label="Фільтр за статусом" className="min-w-0 max-w-full basis-[calc(50%-0.25rem)] md:min-w-36 md:basis-auto">
           <SelectValue>
@@ -190,9 +227,7 @@ export function LedgerFilters() {
       <Select
         value={filters.month}
         items={monthItems}
-        onValueChange={(value) =>
-          value && setFilters((current) => ({ ...current, month: value }))
-        }
+        onValueChange={handleMonthChange}
       >
         <SelectTrigger aria-label="Фільтр за періодом" className="min-w-0 max-w-full basis-[calc(50%-0.25rem)] md:min-w-36 md:basis-auto">
           <SelectValue>
@@ -214,9 +249,7 @@ export function LedgerFilters() {
       <Select
         value={filters.week}
         items={weekItems}
-        onValueChange={(value) =>
-          value && setFilters((current) => ({ ...current, week: value }))
-        }
+        onValueChange={handleWeekChange}
       >
         <SelectTrigger
           aria-label="Фільтр за тижнем"

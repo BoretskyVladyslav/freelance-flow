@@ -17,6 +17,12 @@ import { Button } from "@/components/ui/button";
 import { chartSeries, type ChartPeriod } from "@/lib/aggregates";
 import { formatCompactMoney, formatMoney } from "@/lib/format";
 
+const PERIOD_OPTIONS: Array<{ value: ChartPeriod; label: string }> = [
+  { value: "3d", label: "Останні 3 дні" },
+  { value: "week", label: "За тижнями" },
+  { value: "month", label: "За місяцями" },
+];
+
 export function WeeklyChart() {
   const { views, rates, displayCurrency, hydrated } = useFinance();
   const [period, setPeriod] = useState<ChartPeriod>("week");
@@ -24,11 +30,6 @@ export function WeeklyChart() {
     () => chartSeries(views, displayCurrency, rates, period),
     [displayCurrency, period, rates, views],
   );
-  const periodOptions: Array<{ value: ChartPeriod; label: string }> = [
-    { value: "3d", label: "Останні 3 дні" },
-    { value: "week", label: "За тижнями" },
-    { value: "month", label: "За місяцями" },
-  ];
 
   return (
     <Card className="min-w-0 overflow-hidden print:hidden">
@@ -76,7 +77,7 @@ export function WeeklyChart() {
           )}
         </div>
         <div className="grid w-full grid-cols-3 gap-2" role="group" aria-label="Період графіка">
-          {periodOptions.map((option) => (
+          {PERIOD_OPTIONS.map((option) => (
             <Button
               key={option.value}
               type="button"

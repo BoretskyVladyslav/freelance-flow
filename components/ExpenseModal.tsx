@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { Receipt, Sparkles, Plus } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -47,42 +47,45 @@ export function ExpenseModal({
   const [currency, setCurrency] = useState<Currency>(defaultCurrency);
   const [submitting, setSubmitting] = useState(false);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const cleanTitle = title.trim();
-    const numAmount = Number(amount);
+  const handleSubmit = useCallback(
+    async (e: React.FormEvent) => {
+      e.preventDefault();
+      const cleanTitle = title.trim();
+      const numAmount = Number(amount);
 
-    if (!cleanTitle) {
-      toast.error("Введіть назву витрати");
-      return;
-    }
+      if (!cleanTitle) {
+        toast.error("Введіть назву витрати");
+        return;
+      }
 
-    if (!Number.isFinite(numAmount) || numAmount <= 0) {
-      toast.error("Сума повинна бути більшою за 0");
-      return;
-    }
+      if (!Number.isFinite(numAmount) || numAmount <= 0) {
+        toast.error("Сума повинна бути більшою за 0");
+        return;
+      }
 
-    setSubmitting(true);
-    try {
-      const created = await addExpense({
-        title: cleanTitle,
-        amount: numAmount,
-        currency,
-        expense_date: date || todayIsoDate(),
-      });
+      setSubmitting(true);
+      try {
+        const created = await addExpense({
+          title: cleanTitle,
+          amount: numAmount,
+          currency,
+          expense_date: date || todayIsoDate(),
+        });
 
-      toast.success(`Витрату «${cleanTitle}» додано`);
-      setTitle("");
-      setAmount("");
-      setDate(todayIsoDate());
-      onOpenChange(false);
-      onExpenseAdded?.(created);
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Не вдалося зберегти витрату");
-    } finally {
-      setSubmitting(false);
-    }
-  };
+        toast.success(`Витрату «${cleanTitle}» додано`);
+        setTitle("");
+        setAmount("");
+        setDate(todayIsoDate());
+        onOpenChange(false);
+        onExpenseAdded?.(created);
+      } catch (error) {
+        toast.error(error instanceof Error ? error.message : "Не вдалося зберегти витрату");
+      } finally {
+        setSubmitting(false);
+      }
+    },
+    [amount, currency, date, onExpenseAdded, onOpenChange, title],
+  );
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>

@@ -15,6 +15,8 @@ import {
   applyFilters,
   summarize,
   toDisplayTotals,
+  weeklySeries,
+  withBreakdowns,
   type DashboardTotals,
   type TransactionView,
   type WeeklyPoint,
@@ -24,7 +26,6 @@ import {
   projectsRepository,
   type FinanceSnapshot,
 } from "@/services/projects";
-import { buildFinancialOverview } from "@/services/financials";
 import Decimal from "decimal.js";
 import { convertToDisplay, moneyNumber } from "@/lib/tax-calculator";
 import { getExpenses, addExpense, deleteExpense } from "@/services/supabase-expenses";
@@ -232,16 +233,16 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     [currentUserId, isAdmin, snapshot.transactions, teamScope],
   );
 
-  const overview = useMemo(
-    () =>
-      buildFinancialOverview(
-        scopedTransactions,
-        exchange.rates,
-        snapshot.displayCurrency,
-      ),
-    [exchange.rates, scopedTransactions, snapshot.displayCurrency],
+  const views = useMemo(
+    () => withBreakdowns(scopedTransactions, exchange.rates),
+    [exchange.rates, scopedTransactions],
   );
-  const { views, weekly } = overview;
+
+  const weekly = useMemo(
+    () => weeklySeries(views, snapshot.displayCurrency, exchange.rates),
+    [exchange.rates, snapshot.displayCurrency, views],
+  );
+
   const filteredViews = useMemo(() => applyFilters(views, filters), [filters, views]);
   const totals = useMemo(() => summarize(filteredViews), [filteredViews]);
   const displayTotals = useMemo(
@@ -276,12 +277,11 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
   }, [expenses, filters.month, filters.week]);
 
   const totalExpensesInDisplay = useMemo(() => {
-    const sum = filteredExpenses.reduce((acc, e) => {
+    const totalEur = filteredExpenses.reduce((acc, e) => {
       const toEur = resolveRate(e.currency, exchange.rates);
-      const inEur = new Decimal(e.amount).times(toEur).toNumber();
-      return acc + convertToDisplay(inEur, snapshot.displayCurrency, exchange.rates);
-    }, 0);
-    return moneyNumber(sum);
+      return acc.plus(new Decimal(e.amount).times(toEur));
+    }, new Decimal(0));
+    return convertToDisplay(moneyNumber(totalEur), snapshot.displayCurrency, exchange.rates);
   }, [exchange.rates, filteredExpenses, snapshot.displayCurrency]);
 
   const trueNetPayout = useMemo(() => {

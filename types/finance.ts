@@ -133,6 +133,13 @@ export function isTransaction(value: unknown): value is Transaction {
   if (typeof row.title !== "string" || row.title.trim() === "") return false;
   if (row.clientId !== undefined && typeof row.clientId !== "string") return false;
   if (row.clientName !== undefined && typeof row.clientName !== "string") return false;
+  if (
+    row.client_name !== undefined &&
+    row.client_name !== null &&
+    typeof row.client_name !== "string"
+  ) {
+    return false;
+  }
   if (!isPlatform(row.platform)) return false;
   if (!isFiniteNumber(row.grossAmount) || row.grossAmount < 0) return false;
   if (!isCurrency(row.currency)) return false;
@@ -156,6 +163,7 @@ export function isTransaction(value: unknown): value is Transaction {
   if (row.notes !== undefined && typeof row.notes !== "string") return false;
   if (row.employeeId !== undefined && typeof row.employeeId !== "string") return false;
   if (row.createdBy !== undefined && typeof row.createdBy !== "string") return false;
+  if (row.withdrawn !== undefined && typeof row.withdrawn !== "boolean") return false;
   return true;
 }
 

@@ -1,5 +1,7 @@
 "use client";
 
+import { useMemo } from "react";
+
 import {
   Building2,
   Landmark,
@@ -27,16 +29,19 @@ export function MetricCards() {
   const gain = displayTotals.currencyGainLoss;
   const gainNegative = gain < 0;
 
-  const cards: Array<{
-    key: string;
-    title: string;
-    value: string;
-    description: string;
-    icon: LucideIcon;
-    iconClass?: string;
-    valueClass?: string;
-    span?: string;
-  }> = [
+  const cards = useMemo<
+    Array<{
+      key: string;
+      title: string;
+      value: string;
+      description: string;
+      icon: LucideIcon;
+      iconClass?: string;
+      valueClass?: string;
+      span?: string;
+    }>
+  >(
+    () => [
     {
       key: "gross",
       title: "Загальний дохід (Gross)",
@@ -88,9 +93,22 @@ export function MetricCards() {
       icon: gainNegative ? TrendingDown : TrendingUp,
       iconClass: "text-muted-foreground",
       valueClass: "text-muted-foreground",
-      span: "col-span-2 bg-muted/50 xl:col-span-1 xl:bg-transparent",
     },
-  ];
+    ],
+    [
+      displayCurrency,
+      displayTotals.companyTax,
+      displayTotals.grossInBase,
+      displayTotals.remainingToBePaid,
+      displayTotals.spainTax,
+      gain,
+      gainNegative,
+      isAdmin,
+      teamScope,
+      totalExpensesInDisplay,
+      trueNetPayout,
+    ],
+  );
 
   return (
     <section

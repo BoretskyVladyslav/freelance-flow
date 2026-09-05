@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { Plus, RefreshCw, Receipt } from "lucide-react";
 import { LogoutButton } from "@/components/auth/logout-button";
 import { CloudMigrationBanner } from "@/components/finance/cloud-migration-banner";
@@ -42,10 +42,20 @@ export function Dashboard() {
   const [isExpenseModalOpen, setIsExpenseModalOpen] = useState(false);
   const [selectedProject, setSelectedProject] = useState<Transaction | null>(null);
 
-  function openNewProject() {
+  const openNewProject = useCallback(() => {
     setSelectedProject(null);
     setIsModalOpen(true);
-  }
+  }, []);
+
+  const handleEditProject = useCallback((project: Transaction) => {
+    setSelectedProject(project);
+    setIsModalOpen(true);
+  }, []);
+
+  const handleModalOpenChange = useCallback((open: boolean) => {
+    setIsModalOpen(open);
+    if (!open) setSelectedProject(null);
+  }, []);
 
   return (
     <main className="mx-auto flex min-h-screen w-full min-w-0 max-w-7xl flex-col gap-4 overflow-x-hidden px-4 py-4 sm:gap-6 sm:py-6 md:px-6 lg:px-8">
@@ -196,12 +206,7 @@ export function Dashboard() {
           <LedgerFilters />
         </CardHeader>
         <CardContent className="overflow-visible">
-          <LedgerTable
-            onEdit={(project) => {
-              setSelectedProject(project);
-              setIsModalOpen(true);
-            }}
-          />
+          <LedgerTable onEdit={handleEditProject} />
         </CardContent>
       </Card>
       </div>
@@ -210,10 +215,7 @@ export function Dashboard() {
 
       <QuickEntryDialog
         open={isModalOpen}
-        onOpenChange={(open) => {
-          setIsModalOpen(open);
-          if (!open) setSelectedProject(null);
-        }}
+        onOpenChange={handleModalOpenChange}
         transaction={selectedProject}
       />
 
