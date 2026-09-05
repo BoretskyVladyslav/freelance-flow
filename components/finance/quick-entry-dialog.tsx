@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { CircleHelp } from "lucide-react";
+import { CircleHelp, User } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
@@ -51,6 +51,7 @@ import {
 
 type FormState = {
   title: string;
+  clientName: string;
   platform: Platform;
   grossAmount: string;
   currency: Currency;
@@ -64,6 +65,7 @@ type FormState = {
 
 const EMPTY_FORM: FormState = {
   title: "",
+  clientName: "",
   platform: "Direct Client",
   grossAmount: "",
   currency: "UAH",
@@ -99,6 +101,7 @@ export function QuickEntryDialog({
     if (transaction) {
       setForm({
         title: transaction.title,
+        clientName: transaction.client_name ?? transaction.clientName ?? "",
         platform: transaction.platform,
         grossAmount: String(transaction.grossAmount),
         currency: transaction.currency,
@@ -214,8 +217,11 @@ export function QuickEntryDialog({
       return;
     }
 
+    const clientName = form.clientName.trim();
     const payload = {
       title: form.title.trim(),
+      clientName: clientName || undefined,
+      client_name: clientName || null,
       platform: form.platform,
       grossAmount,
       currency: form.currency,
@@ -273,6 +279,21 @@ export function QuickEntryDialog({
                 onChange={(event) => setField("title", event.target.value)}
                 placeholder="Лендінг для клієнта"
               />
+            </div>
+            <div className="grid gap-1.5 sm:col-span-2">
+              <div className="flex h-5 items-center">
+                <Label htmlFor="client_name">Клієнт / Компанія</Label>
+              </div>
+              <div className="relative">
+                <Input
+                  id="client_name"
+                  value={form.clientName}
+                  onChange={(event) => setField("clientName", event.target.value)}
+                  placeholder="напр. TechCorp, Upwork Client, Олександр"
+                  className="pl-9"
+                />
+                <User className="pointer-events-none absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+              </div>
             </div>
             <div className="grid gap-1.5">
               <div className="flex h-5 items-center">

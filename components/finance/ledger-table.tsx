@@ -199,9 +199,17 @@ export function LedgerTable({ onEdit }: LedgerTableProps) {
               className="relative rounded-xl border border-slate-200/80 bg-card p-4 pr-14 shadow-sm dark:border-slate-800"
             >
               <div className="mb-3 flex items-start gap-2">
-                <p className="min-w-0 flex-1 text-base font-semibold leading-snug">
-                  {row.title}
-                </p>
+                <div className="min-w-0 flex-1">
+                  <p className="text-base font-semibold leading-snug">
+                    {row.title}
+                  </p>
+                  {(row.client_name || row.clientName) ? (
+                    <p className="mt-0.5 flex items-center gap-1 text-xs text-muted-foreground">
+                      <span className="shrink-0">👤</span>
+                      <span className="truncate font-medium">{row.client_name || row.clientName}</span>
+                    </p>
+                  ) : null}
+                </div>
                 <Badge
                   variant="outline"
                   className={cn("max-w-[42%] shrink-0 truncate", PLATFORM_BADGE_CLASS[row.platform])}
@@ -302,6 +310,14 @@ export function LedgerTable({ onEdit }: LedgerTableProps) {
                   </TooltipTrigger>
                   <TooltipContent className="max-w-xs">{row.title}</TooltipContent>
                 </Tooltip>
+                {(row.client_name || row.clientName) ? (
+                  <div className="flex items-center gap-1 truncate text-[11px] text-muted-foreground">
+                    <span className="shrink-0">👤</span>
+                    <span className="truncate font-medium text-slate-600 dark:text-slate-300">
+                      {row.client_name || row.clientName}
+                    </span>
+                  </div>
+                ) : null}
                 {row.notes ? (
                   <div className="truncate text-[11px] text-muted-foreground">{row.notes}</div>
                 ) : null}

@@ -20,6 +20,7 @@ export type Transaction = {
   title: string;
   clientId?: string;
   clientName?: string;
+  client_name?: string | null;
   platform: Platform;
   grossAmount: number;
   currency: Currency;
