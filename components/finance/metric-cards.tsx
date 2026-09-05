@@ -5,7 +5,6 @@ import { useMemo } from "react";
 import {
   Building2,
   Landmark,
-  Receipt,
   TrendingDown,
   TrendingUp,
   Wallet,
@@ -23,8 +22,6 @@ export function MetricCards() {
     hydrated,
     isAdmin,
     teamScope,
-    totalExpensesInDisplay,
-    trueNetPayout,
   } = useFinance();
   const gain = displayTotals.currencyGainLoss;
   const gainNegative = gain < 0;
@@ -69,22 +66,11 @@ export function MetricCards() {
       valueClass: "text-rose-600 dark:text-rose-400",
     },
     {
-      key: "opex",
-      title: isAdmin ? "Операційні витрати" : "Персональні витрати",
-      value: formatMoney(totalExpensesInDisplay, displayCurrency),
-      description: isAdmin && teamScope === "all"
-        ? "Підписки, хостинг та інструменти команди за вибраний період."
-        : "Витрати та підписки за вибраний період.",
-      icon: Receipt,
-      iconClass: "text-rose-600 dark:text-rose-400",
-      valueClass: "text-rose-600 dark:text-rose-400",
-    },
-    {
       key: "net",
       title: "Чистий дохід до виплати (Net)",
-      value: formatMoney(trueNetPayout, displayCurrency),
+      value: formatMoney(displayTotals.netPayout, displayCurrency),
       description: isAdmin && teamScope === "all"
-        ? `True Net Profit (після OpEx). До виплати: ${formatMoney(displayTotals.remainingToBePaid, displayCurrency)}`
+        ? `Чистий дохід по компанії. До виплати: ${formatMoney(displayTotals.remainingToBePaid, displayCurrency)}`
         : `Чистий дохід за вашими проєктами. До виплати: ${formatMoney(displayTotals.remainingToBePaid, displayCurrency)}`,
       icon: Wallet,
       valueClass: "text-emerald-600 dark:text-emerald-400",
@@ -103,14 +89,13 @@ export function MetricCards() {
       displayCurrency,
       displayTotals.companyTax,
       displayTotals.grossInBase,
+      displayTotals.netPayout,
       displayTotals.remainingToBePaid,
       displayTotals.spainTax,
       gain,
       gainNegative,
       isAdmin,
       teamScope,
-      totalExpensesInDisplay,
-      trueNetPayout,
     ],
   );
 
@@ -118,7 +103,7 @@ export function MetricCards() {
     <section
       aria-live="polite"
       aria-atomic="true"
-      className="grid min-w-0 grid-cols-2 items-stretch gap-3 md:gap-4 xl:grid-cols-6"
+      className="grid min-w-0 grid-cols-2 items-stretch gap-3 md:gap-4 xl:grid-cols-5"
     >
       {cards.map((card) => (
         <Card

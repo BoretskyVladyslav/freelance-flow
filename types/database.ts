@@ -54,7 +54,6 @@ export type Database = {
           status: string;
           week_number: number;
           notes: string | null;
-          withdrawn?: boolean;
           created_at: string;
           updated_at: string;
         };
@@ -77,7 +76,6 @@ export type Database = {
           status: string;
           week_number: number;
           notes?: string | null;
-          withdrawn?: boolean;
           created_at?: string;
           updated_at?: string;
         };
@@ -100,39 +98,8 @@ export type Database = {
           status?: string;
           week_number?: number;
           notes?: string | null;
-          withdrawn?: boolean;
           created_at?: string;
           updated_at?: string;
-        };
-        Relationships: [];
-      };
-      expenses: {
-        Row: {
-          id: string;
-          title: string;
-          amount: number;
-          currency: string;
-          expense_date: string;
-          employee_id: string | null;
-          created_at: string;
-        };
-        Insert: {
-          id?: string;
-          title: string;
-          amount: number;
-          currency?: string;
-          expense_date?: string;
-          employee_id?: string | null;
-          created_at?: string;
-        };
-        Update: {
-          id?: string;
-          title?: string;
-          amount?: number;
-          currency?: string;
-          expense_date?: string;
-          employee_id?: string | null;
-          created_at?: string;
         };
         Relationships: [];
       };

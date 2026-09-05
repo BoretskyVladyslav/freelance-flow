@@ -35,21 +35,10 @@ export type Transaction = {
   notes?: string;
   employeeId?: string;
   createdBy?: string;
-  withdrawn?: boolean;
-  net_amount?: number;
 };
 
 export type Project = Transaction;
 
-export type Expense = {
-  id: string;
-  title: string;
-  amount: number;
-  currency: Currency;
-  expense_date: string;
-  employee_id?: string | null;
-  created_at?: string;
-};
 
 export type TaxBreakdown = {
   grossInBase: number;
@@ -164,7 +153,6 @@ export function isTransaction(value: unknown): value is Transaction {
   if (row.notes !== undefined && typeof row.notes !== "string") return false;
   if (row.employeeId !== undefined && typeof row.employeeId !== "string") return false;
   if (row.createdBy !== undefined && typeof row.createdBy !== "string") return false;
-  if (row.withdrawn !== undefined && typeof row.withdrawn !== "boolean") return false;
   return true;
 }
 

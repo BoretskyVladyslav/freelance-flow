@@ -59,7 +59,6 @@ create table if not exists public.projects (
     check (status in ('Pending', 'Paid', 'In Progress')),
   week_number integer not null check (week_number between 1 and 53),
   notes text,
-  withdrawn boolean not null default false,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
@@ -224,53 +223,6 @@ drop policy if exists "projects_delete_own_or_admin" on public.projects;
 drop policy if exists "projects_delete_admin_only" on public.projects;
 create policy "projects_delete_admin_only"
   on public.projects
-  for delete
-  to authenticated
-  using (public.is_admin());
-
-create table if not exists public.expenses (
-  id uuid primary key default gen_random_uuid(),
-  employee_id uuid references public.profiles (id) on delete set null,
-  title text not null,
-  amount numeric(14, 2) not null check (amount >= 0),
-  currency text not null default 'UAH' check (currency in ('EUR', 'USD', 'UAH', 'PLN')),
-  expense_date date not null default current_date,
-  created_at timestamptz not null default now()
-);
-
-alter table public.expenses
-  add column if not exists employee_id uuid references public.profiles (id) on delete set null;
-
-create index if not exists expenses_employee_id_idx on public.expenses (employee_id);
-
-alter table public.expenses enable row level security;
-
-drop policy if exists "Enable all operations for authenticated users" on public.expenses;
-drop policy if exists "expenses_select_own_or_admin" on public.expenses;
-create policy "expenses_select_own_or_admin"
-  on public.expenses
-  for select
-  to authenticated
-  using (employee_id = auth.uid() or public.is_admin());
-
-drop policy if exists "expenses_insert_own_or_admin" on public.expenses;
-create policy "expenses_insert_own_or_admin"
-  on public.expenses
-  for insert
-  to authenticated
-  with check (employee_id = auth.uid() or public.is_admin());
-
-drop policy if exists "expenses_update_own_or_admin" on public.expenses;
-create policy "expenses_update_own_or_admin"
-  on public.expenses
-  for update
-  to authenticated
-  using (employee_id = auth.uid() or public.is_admin())
-  with check (employee_id = auth.uid() or public.is_admin());
-
-drop policy if exists "expenses_delete_admin_only" on public.expenses;
-create policy "expenses_delete_admin_only"
-  on public.expenses
   for delete
   to authenticated
   using (public.is_admin());
