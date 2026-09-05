@@ -21,4 +21,5 @@ description: Core architecture, UI/UX guidelines, and autonomous execution rules
 ## 4. Standard Workflow
 1. Write/Edit code.
 2. Run `npm run build` to verify type safety.
-3. If successful, run: `git add . && git commit -m "feat/fix/refactor: brief description"` (do not push unless explicitly requested).
+3. If successful, run: `git add . && git commit -m "feat/fix/refactor: brief description"`. If the commit is successful, you MUST immediately push the changes using the correct git executable path. Never wait for permission to push.
+   - Note: Git executable is located at `"C:\Users\Vasylyna\AppData\Local\GitHubDesktop\app-3.4.10\resources\app\git\cmd\git.exe"`.
