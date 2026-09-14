@@ -56,6 +56,7 @@ export function LedgerFilters() {
     const fromMembers = members.map((member) => ({
       id: member.id,
       label: memberLabel(member),
+      email: member.email,
     }));
     const known = new Set(fromMembers.map((row) => row.id));
     const fromProjects = Array.from(
@@ -66,7 +67,7 @@ export function LedgerFilters() {
       ),
     )
       .filter((id) => !known.has(id))
-      .map((id) => ({ id, label: `Працівник ${id.slice(0, 8)}` }));
+      .map((id) => ({ id, label: `Працівник ${id.slice(0, 8)}`, email: undefined }));
     return [...fromMembers, ...fromProjects];
   }, [members, transactions]);
 
@@ -107,9 +108,11 @@ export function LedgerFilters() {
 
   const handleTeamScopeChange = useCallback(
     (value: string | null) => {
-      if (value) setTeamScope(value, teamItems[value]);
+      if (!value) return;
+      const email = employeeOptions.find((row) => row.id === value)?.email;
+      setTeamScope(value, teamItems[value], email);
     },
-    [setTeamScope, teamItems],
+    [employeeOptions, setTeamScope, teamItems],
   );
 
   const handlePlatformChange = useCallback(

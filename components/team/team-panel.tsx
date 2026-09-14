@@ -117,7 +117,7 @@ export function TeamPanel() {
 
   const onViewProjects = useCallback(
     (member: TeamMember) => {
-      viewEmployee(member.id, memberLabel(member));
+      viewEmployee(member.id, memberLabel(member), member.email);
       document
         .getElementById("financial-overview")
         ?.scrollIntoView({ behavior: "smooth", block: "start" });

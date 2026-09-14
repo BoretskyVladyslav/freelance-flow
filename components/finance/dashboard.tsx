@@ -1,7 +1,8 @@
 "use client";
 
 import { useCallback, useState } from "react";
-import { Plus, RefreshCw } from "lucide-react";
+import { Copy, Plus, RefreshCw } from "lucide-react";
+import { toast } from "sonner";
 import { LogoutButton } from "@/components/auth/logout-button";
 import { CloudMigrationBanner } from "@/components/finance/cloud-migration-banner";
 import { BackupControls, MoreToolsDropdown } from "@/components/finance/backup-controls";
@@ -19,6 +20,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { uahPerUnit } from "@/lib/exchange-rates";
 import { formatDate, formatRate } from "@/lib/format";
+import { formatEmployeePeriodTelegram } from "@/lib/telegram-copy";
 import { useMounted } from "@/hooks/use-mounted";
 import type { Transaction } from "@/types/finance";
 
@@ -33,10 +35,30 @@ export function Dashboard() {
     isAdmin,
     employeeView,
     clearEmployeeView,
+    filteredViews,
+    filters,
   } = useFinance();
   const mounted = useMounted();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedProject, setSelectedProject] = useState<Transaction | null>(null);
+
+  const copyEmployeeWeekSummary = useCallback(async () => {
+    if (!employeeView) return;
+    const text = formatEmployeePeriodTelegram({
+      employeeLabel: employeeView.label,
+      email: employeeView.email,
+      filters,
+      views: filteredViews,
+      displayCurrency,
+      rates,
+    });
+    try {
+      await navigator.clipboard.writeText(text);
+      toast.success("Скопійовано для Telegram!");
+    } catch {
+      toast.error("Не вдалося скопіювати.");
+    }
+  }, [displayCurrency, employeeView, filteredViews, filters, rates]);
 
   const openNewProject = useCallback(() => {
     setSelectedProject(null);
@@ -149,8 +171,23 @@ export function Dashboard() {
         >
           <p className="min-w-0 font-medium">
             Перегляд аналітики працівника: {employeeView.label}
+            {employeeView.email ? (
+              <span className="mt-0.5 block truncate text-xs font-normal text-blue-800 dark:text-blue-200">
+                {employeeView.email}
+              </span>
+            ) : null}
           </p>
-          <div className="flex shrink-0 gap-2">
+          <div className="flex shrink-0 flex-wrap gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="bg-white dark:bg-transparent"
+              onClick={() => void copyEmployeeWeekSummary()}
+            >
+              <Copy />
+              Скопіювати підсумок тижня в Telegram
+            </Button>
             <Button
               type="button"
               variant="outline"

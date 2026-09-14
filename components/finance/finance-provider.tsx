@@ -46,9 +46,9 @@ type FinanceContextValue = {
   isAdmin: boolean;
   currentUserId: string;
   teamScope: TeamScope;
-  setTeamScope: (scope: TeamScope, label?: string) => void;
+  setTeamScope: (scope: TeamScope, label?: string, email?: string) => void;
   employeeView: EmployeeView | null;
-  viewEmployee: (id: string, label: string) => void;
+  viewEmployee: (id: string, label: string, email?: string) => void;
   clearEmployeeView: () => void;
   transactions: Transaction[];
   views: TransactionView[];
@@ -197,7 +197,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
   }, [exchange.rates, hydrated]);
 
   const isAdmin = role === "admin";
-  const setTeamScope = useCallback((scope: TeamScope, label?: string) => {
+  const setTeamScope = useCallback((scope: TeamScope, label?: string, email?: string) => {
     if (!isAdmin) {
       setTeamScopeState("personal");
       setEmployeeView(null);
@@ -208,14 +208,16 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
       setEmployeeView(null);
       return;
     }
+    const trimmedEmail = email?.trim();
     setEmployeeView({
       id: scope,
       label: (label ?? "").trim() || scope,
+      email: trimmedEmail || undefined,
     });
   }, [isAdmin]);
 
-  const viewEmployee = useCallback((id: string, label: string) => {
-    setTeamScope(id, label);
+  const viewEmployee = useCallback((id: string, label: string, email?: string) => {
+    setTeamScope(id, label, email);
   }, [setTeamScope]);
 
   const clearEmployeeView = useCallback(() => {
@@ -245,8 +247,8 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
   const filteredViews = useMemo(() => applyFilters(views, filters), [filters, views]);
   const totals = useMemo(() => summarize(filteredViews), [filteredViews]);
   const displayTotals = useMemo(
-    () => toDisplayTotals(totals, snapshot.displayCurrency, exchange.rates, filteredViews),
-    [exchange.rates, filteredViews, snapshot.displayCurrency, totals],
+    () => toDisplayTotals(totals, snapshot.displayCurrency, exchange.rates),
+    [exchange.rates, snapshot.displayCurrency, totals],
   );
 
   const addTransaction = useCallback(

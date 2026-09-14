@@ -1,7 +1,8 @@
 "use client";
 
 import { memo, useState } from "react";
-import { MoreHorizontal } from "lucide-react";
+import { Copy, MoreHorizontal } from "lucide-react";
+import { toast } from "sonner";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -36,6 +37,7 @@ import {
 } from "@/components/ui/tooltip";
 import { useFinance } from "@/components/finance/finance-provider";
 import { formatMoney, formatSignedMoney, formatWeekSpan } from "@/lib/format";
+import { formatTransactionTelegram } from "@/lib/telegram-copy";
 import { FormattedDate } from "@/components/ui/formatted-date";
 import { cn } from "@/lib/utils";
 import { PLATFORM_LABELS, STATUS_LABELS } from "@/lib/labels";
@@ -69,6 +71,15 @@ const compactCell = "px-2 py-1.5";
 
 function rowWeekSpan(row: TransactionView): string {
   return formatWeekSpan(weekKeyFromIsoDate(getTransactionStartDate(row)));
+}
+
+async function copyTransactionForTelegram(row: TransactionView): Promise<void> {
+  try {
+    await navigator.clipboard.writeText(formatTransactionTelegram(row));
+    toast.success("Скопійовано для Telegram!");
+  } catch {
+    toast.error("Не вдалося скопіювати.");
+  }
 }
 
 type LedgerTableProps = {
@@ -105,6 +116,15 @@ const RowActions = memo(function RowActions({
         <span className="sr-only">Відкрити дії</span>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" side="bottom" className="z-[10050]">
+        <DropdownMenuItem
+          onClick={() => {
+            setOpen(false);
+            void copyTransactionForTelegram(row);
+          }}
+        >
+          <Copy />
+          Копіювати для Telegram
+        </DropdownMenuItem>
         <DropdownMenuItem
           onClick={() => {
             setOpen(false);
@@ -253,6 +273,17 @@ export function LedgerTable({ onEdit }: LedgerTableProps) {
                   </p>
                 </div>
               </div>
+              <button
+                type="button"
+                className={cn(
+                  buttonVariants({ variant: "outline", size: "sm" }),
+                  "mt-3 h-11 w-full",
+                )}
+                onClick={() => void copyTransactionForTelegram(row)}
+              >
+                <Copy />
+                Копіювати для Telegram
+              </button>
             </article>
           );
         })}

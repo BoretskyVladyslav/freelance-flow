@@ -27,7 +27,7 @@ export function buildFinancialOverview(
   return {
     views,
     totals,
-    displayTotals: toDisplayTotals(totals, displayCurrency, rates, views),
+    displayTotals: toDisplayTotals(totals, displayCurrency, rates),
     weekly: weeklySeries(views, displayCurrency, rates),
   };
 }

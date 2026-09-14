@@ -4,7 +4,6 @@ import { formatWeekSpan } from "@/lib/format";
 import {
   calculateTransaction,
   convertToDisplay,
-  displayCurrencyGainLoss,
   moneyNumber,
 } from "@/lib/tax-calculator";
 import {
@@ -35,7 +34,6 @@ export type DashboardTotals = {
   companyTax: number;
   netPayout: number;
   remainingToBePaid: number;
-  currencyGainLoss: number;
 };
 
 export type WeeklyPoint = {
@@ -84,9 +82,6 @@ export function summarize(transactions: TransactionView[]): DashboardTotals {
       acc.spainTax = acc.spainTax.plus(transaction.breakdown.spainTax);
       acc.companyTax = acc.companyTax.plus(transaction.breakdown.companyTax);
       acc.netPayout = acc.netPayout.plus(transaction.breakdown.netPayout);
-      acc.currencyGainLoss = acc.currencyGainLoss.plus(
-        transaction.breakdown.currencyGainLoss,
-      );
       if (transaction.status !== "Paid") {
         acc.remainingToBePaid = acc.remainingToBePaid.plus(transaction.breakdown.netPayout);
       }
@@ -98,7 +93,6 @@ export function summarize(transactions: TransactionView[]): DashboardTotals {
       companyTax: new Decimal(0),
       netPayout: new Decimal(0),
       remainingToBePaid: new Decimal(0),
-      currencyGainLoss: new Decimal(0),
     },
   );
 
@@ -108,7 +102,6 @@ export function summarize(transactions: TransactionView[]): DashboardTotals {
     companyTax: moneyNumber(totals.companyTax),
     netPayout: moneyNumber(totals.netPayout),
     remainingToBePaid: moneyNumber(totals.remainingToBePaid),
-    currencyGainLoss: moneyNumber(totals.currencyGainLoss),
   };
 }
 
@@ -116,30 +109,13 @@ export function toDisplayTotals(
   totals: DashboardTotals,
   displayCurrency: Currency,
   rates: ExchangeRates | null,
-  views: TransactionView[],
 ): DashboardTotals {
-  const currencyGainLoss = moneyNumber(
-    views.reduce(
-      (acc, transaction) =>
-        acc.plus(
-          displayCurrencyGainLoss(
-            transaction.currency,
-            transaction.breakdown.currencyGainLoss,
-            displayCurrency,
-            rates,
-          ),
-        ),
-      new Decimal(0),
-    ),
-  );
-
   return {
     grossInBase: convertToDisplay(totals.grossInBase, displayCurrency, rates),
     spainTax: convertToDisplay(totals.spainTax, displayCurrency, rates),
     companyTax: convertToDisplay(totals.companyTax, displayCurrency, rates),
     netPayout: convertToDisplay(totals.netPayout, displayCurrency, rates),
     remainingToBePaid: convertToDisplay(totals.remainingToBePaid, displayCurrency, rates),
-    currencyGainLoss,
   };
 }
 

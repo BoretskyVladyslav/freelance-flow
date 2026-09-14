@@ -5,14 +5,12 @@ import { useMemo } from "react";
 import {
   Building2,
   Landmark,
-  TrendingDown,
-  TrendingUp,
   Wallet,
   type LucideIcon,
 } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useFinance } from "@/components/finance/finance-provider";
-import { formatMoney, formatSignedMoney } from "@/lib/format";
+import { formatMoney } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
 export function MetricCards() {
@@ -23,8 +21,6 @@ export function MetricCards() {
     isAdmin,
     teamScope,
   } = useFinance();
-  const gain = displayTotals.currencyGainLoss;
-  const gainNegative = gain < 0;
 
   const cards = useMemo<
     Array<{
@@ -33,9 +29,7 @@ export function MetricCards() {
       value: string;
       description: string;
       icon: LucideIcon;
-      iconClass?: string;
       valueClass?: string;
-      span?: string;
     }>
   >(
     () => [
@@ -75,15 +69,6 @@ export function MetricCards() {
       icon: Wallet,
       valueClass: "text-emerald-600 dark:text-emerald-400",
     },
-    {
-      key: "fx",
-      title: "Курсова різниця",
-      value: formatSignedMoney(gain, displayCurrency),
-      description: "Різниця між актуальним курсом і курсом на момент створення.",
-      icon: gainNegative ? TrendingDown : TrendingUp,
-      iconClass: "text-muted-foreground",
-      valueClass: "text-muted-foreground",
-    },
     ],
     [
       displayCurrency,
@@ -92,8 +77,6 @@ export function MetricCards() {
       displayTotals.netPayout,
       displayTotals.remainingToBePaid,
       displayTotals.spainTax,
-      gain,
-      gainNegative,
       isAdmin,
       teamScope,
     ],
@@ -103,24 +86,19 @@ export function MetricCards() {
     <section
       aria-live="polite"
       aria-atomic="true"
-      className="grid min-w-0 grid-cols-2 items-stretch gap-3 md:gap-4 xl:grid-cols-5"
+      className="grid min-w-0 grid-cols-2 items-stretch gap-3 md:grid-cols-4 md:gap-4"
     >
       {cards.map((card) => (
         <Card
           key={card.key}
-          className={cn(
-            "flex h-full min-w-0 flex-col justify-between [--card-spacing:--spacing(3)] md:[--card-spacing:--spacing(4)]",
-            card.span,
-          )}
+          className="flex h-full min-w-0 flex-col justify-between [--card-spacing:--spacing(3)] md:[--card-spacing:--spacing(4)]"
         >
           <CardHeader className="gap-2">
             <div className="flex h-8 items-start justify-between gap-2 md:h-10">
               <CardDescription className="line-clamp-2 text-xs leading-4 md:text-sm md:leading-5">
                 {card.title}
               </CardDescription>
-              <card.icon
-                className={cn("size-4 shrink-0 text-muted-foreground", card.iconClass)}
-              />
+              <card.icon className="size-4 shrink-0 text-muted-foreground" />
             </div>
             <CardTitle
               className={cn(
