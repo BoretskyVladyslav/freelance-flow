@@ -19,6 +19,7 @@ export const TAX_MODELS = ["spain_19", "fop_3"] as const;
 export type TaxModel = (typeof TAX_MODELS)[number];
 export const DEFAULT_TAX_MODEL: TaxModel = "spain_19";
 export const ADMIN_FOP_EMAIL = "workspacetechdef@gmail.com";
+export const FOP_TAX_CUTOVER_DATE = "2026-09-01";
 
 export type Transaction = {
   id: string;
@@ -110,23 +111,56 @@ export function isTaxModel(value: unknown): value is TaxModel {
 }
 
 export function getTaxModel(
-  transaction: Pick<Transaction, "tax_model"> | TaxModel | null | undefined,
+  transaction:
+    | TaxModel
+    | null
+    | undefined
+    | {
+        tax_model?: TaxModel | string | null;
+        startDate?: string | null;
+        date?: string | null;
+        createdByEmail?: string | null;
+        isAdmin?: boolean;
+      },
 ): TaxModel {
   if (typeof transaction === "string") {
     return transaction === "fop_3" ? "fop_3" : "spain_19";
   }
-  return transaction?.tax_model === "fop_3" ? "fop_3" : "spain_19";
+  if (!transaction) return DEFAULT_TAX_MODEL;
+  return resolveTaxModel(transaction);
+}
+
+export function resolveTaxModel(input: {
+  tax_model?: TaxModel | string | null;
+  startDate?: string | null;
+  date?: string | null;
+  createdByEmail?: string | null;
+  isAdmin?: boolean;
+}): TaxModel {
+  if (input.tax_model === "fop_3" || input.tax_model === "spain_19") {
+    return input.tax_model;
+  }
+  const email = input.createdByEmail?.trim().toLowerCase();
+  if (input.isAdmin || email === ADMIN_FOP_EMAIL) {
+    return "fop_3";
+  }
+  const start = (input.startDate || input.date || "").slice(0, 10);
+  if (start >= FOP_TAX_CUTOVER_DATE) {
+    return "fop_3";
+  }
+  return DEFAULT_TAX_MODEL;
 }
 
 export function defaultTaxModelForCreator(options: {
   isAdmin: boolean;
   email?: string | null;
+  startDate?: string | null;
 }): TaxModel {
-  const email = options.email?.trim().toLowerCase();
-  if (options.isAdmin || email === ADMIN_FOP_EMAIL) {
-    return "fop_3";
-  }
-  return DEFAULT_TAX_MODEL;
+  return resolveTaxModel({
+    isAdmin: options.isAdmin,
+    createdByEmail: options.email,
+    startDate: options.startDate,
+  });
 }
 
 function isFiniteNumber(value: unknown): value is number {

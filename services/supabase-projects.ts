@@ -10,6 +10,7 @@ import {
   isCurrency,
   isPaymentStatus,
   isPlatform,
+  resolveTaxModel,
   type TaxModel,
   type Transaction,
 } from "@/types/finance";
@@ -20,6 +21,9 @@ const UUID_RE =
 
 export const TAX_MODEL_SCHEMA_CACHE_WARNING =
   "[freelance-flow] Supabase schema cache is missing projects.tax_model (PGRST204). Retrying the save without tax_model so the UI does not crash. Apply supabase_fop_tax_migration.sql and reload the PostgREST schema cache.";
+
+export const UAH_AMOUNT_SCHEMA_CACHE_WARNING =
+  "[freelance-flow] Supabase schema cache is missing projects UAH amount columns (PGRST204). Retrying the save without UAH fields while keeping tax_model. Apply supabase_uah_amounts_migration.sql and reload the PostgREST schema cache.";
 
 export function ensureProjectUuid(id: string): string {
   return UUID_RE.test(id) ? id : crypto.randomUUID();
@@ -40,36 +44,85 @@ function toIsoDate(value: string | null | undefined): string | undefined {
   return value.slice(0, 10);
 }
 
-export function resolveRowTaxModel(value: unknown): TaxModel {
-  const fallback = value ?? "spain_19";
-  return fallback === "fop_3" ? "fop_3" : "spain_19";
+export function resolveRowTaxModel(
+  value: unknown,
+  context?: {
+    startDate?: string | null;
+    date?: string | null;
+    createdByEmail?: string | null;
+    isAdmin?: boolean;
+  },
+): TaxModel {
+  return resolveTaxModel({
+    tax_model: typeof value === "string" ? value : undefined,
+    startDate: context?.startDate,
+    date: context?.date,
+    createdByEmail: context?.createdByEmail,
+    isAdmin: context?.isAdmin,
+  });
+}
+
+function schemaErrorText(
+  error: { code?: string | null; message?: string | null } | null | undefined,
+): { code: string; message: string } {
+  return {
+    code: String(error?.code ?? "").toUpperCase(),
+    message: String(error?.message ?? "").toLowerCase(),
+  };
+}
+
+function mentionsUahAmountColumn(message: string): boolean {
+  return (
+    message.includes("gross_uah") ||
+    message.includes("net_uah") ||
+    message.includes("uah_rate_at_creation")
+  );
+}
+
+function isSchemaCacheStyle(code: string, message: string): boolean {
+  return (
+    code === "PGRST204" ||
+    message.includes("schema cache") ||
+    message.includes("could not find") ||
+    message.includes("does not exist")
+  );
+}
+
+export function isUahAmountSchemaCacheError(
+  error: { code?: string | null; message?: string | null } | null | undefined,
+): boolean {
+  if (!error) return false;
+  const { code, message } = schemaErrorText(error);
+  if (!mentionsUahAmountColumn(message)) return false;
+  if (code === "42703") return true;
+  return isSchemaCacheStyle(code, message);
 }
 
 export function isTaxModelSchemaCacheError(
   error: { code?: string | null; message?: string | null } | null | undefined,
 ): boolean {
   if (!error) return false;
-  const code = String(error.code ?? "").toUpperCase();
-  const message = String(error.message ?? "").toLowerCase();
-  if (code === "PGRST204") return true;
-  if (code === "42703" && message.includes("tax_model")) return true;
-  return (
-    message.includes("tax_model") &&
-    (message.includes("schema cache") ||
-      message.includes("could not find") ||
-      message.includes("does not exist"))
-  );
+  const { code, message } = schemaErrorText(error);
+  if (!message.includes("tax_model")) return false;
+  if (code === "42703") return true;
+  return isSchemaCacheStyle(code, message);
 }
 
-export function stripTaxModelFromRows(rows: ProjectInsert[]): Array<Omit<ProjectInsert, "tax_model">> {
+export function stripUahAmountsFromRows(rows: ProjectInsert[]): ProjectInsert[] {
   return rows.map((row) => {
     const {
-      tax_model: _taxModel,
       gross_uah: _grossUah,
       net_uah: _netUah,
       uah_rate_at_creation: _uahRate,
       ...rest
     } = row;
+    return rest;
+  });
+}
+
+export function stripTaxModelFromRows(rows: ProjectInsert[]): Array<Omit<ProjectInsert, "tax_model">> {
+  return rows.map((row) => {
+    const { tax_model: _taxModel, ...rest } = row;
     return rest;
   });
 }
@@ -80,14 +133,28 @@ export async function writeProjectsWithTaxModelFallback(
 ): Promise<void> {
   const first = await write(rows);
   if (!first.error) return;
-  if (!isTaxModelSchemaCacheError(first.error)) {
-    throw new Error(first.error.message ?? "Не вдалося зберегти проєкти.");
+
+  let pending = rows;
+  let error = first.error;
+
+  if (isUahAmountSchemaCacheError(error)) {
+    console.warn(UAH_AMOUNT_SCHEMA_CACHE_WARNING);
+    pending = stripUahAmountsFromRows(pending);
+    const uahRetry = await write(pending);
+    if (!uahRetry.error) return;
+    error = uahRetry.error;
   }
-  console.warn(TAX_MODEL_SCHEMA_CACHE_WARNING);
-  const retry = await write(stripTaxModelFromRows(rows) as ProjectInsert[]);
-  if (retry.error) {
-    throw new Error(retry.error.message ?? "Не вдалося зберегти проєкти.");
+
+  if (isTaxModelSchemaCacheError(error)) {
+    console.warn(TAX_MODEL_SCHEMA_CACHE_WARNING);
+    const retry = await write(stripTaxModelFromRows(pending) as ProjectInsert[]);
+    if (retry.error) {
+      throw new Error(retry.error.message ?? "Не вдалося зберегти проєкти.");
+    }
+    return;
   }
+
+  throw new Error(error.message ?? "Не вдалося зберегти проєкти.");
 }
 
 function rowToTransaction(row: ProjectRowLike): Transaction | null {
@@ -114,7 +181,10 @@ function rowToTransaction(row: ProjectRowLike): Transaction | null {
     notes: row.notes ?? undefined,
     employeeId: row.employee_id,
     createdBy: row.created_by ?? undefined,
-    tax_model: resolveRowTaxModel(row.tax_model ?? "spain_19"),
+    tax_model: resolveRowTaxModel(row.tax_model, {
+      startDate: toIsoDate(row.start_date),
+      date: row.date,
+    }),
     uahRateAtCreation:
       typeof row.uah_rate_at_creation === "number" && row.uah_rate_at_creation > 0
         ? Number(row.uah_rate_at_creation)
@@ -150,7 +220,10 @@ export function transactionToRow(transaction: Transaction, userId: string): Proj
     status: transaction.status,
     week_number: transaction.weekNumber,
     notes: transaction.notes ?? null,
-    tax_model: resolveRowTaxModel(transaction.tax_model),
+    tax_model: resolveRowTaxModel(transaction.tax_model, {
+      startDate: transaction.startDate,
+      date: transaction.date,
+    }),
     uah_rate_at_creation: transaction.uahRateAtCreation ?? null,
     gross_uah: transaction.gross_uah ?? null,
     net_uah: transaction.net_uah ?? null,

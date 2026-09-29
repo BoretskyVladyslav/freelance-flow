@@ -37,7 +37,8 @@ import {
   TAX_MODEL_LABELS,
 } from "@/lib/labels";
 import { applyEndDateChange, applyStatusChange } from "@/lib/project-automation";
-import { calculateTransaction, convertToDisplay, resolveUahSnapshot, taxModelLabel } from "@/lib/tax-calculator";
+import { calculateFinancialBreakdown } from "@/lib/finance";
+import { convertToDisplay, resolveUahSnapshot, taxModelLabel } from "@/lib/tax-calculator";
 import { isoWeekFromIsoDate, todayIsoDate, weekKeyFromIsoDate } from "@/lib/week";
 import {
   CURRENCIES,
@@ -128,7 +129,11 @@ export function QuickEntryDialog({
     setForm({
       ...EMPTY_FORM,
       startDate: todayIsoDate(),
-      tax_model: defaultTaxModelForCreator({ isAdmin, email: currentUserEmail }),
+      tax_model: defaultTaxModelForCreator({
+        isAdmin,
+        email: currentUserEmail,
+        startDate: todayIsoDate(),
+      }),
     });
   }, [currentUserEmail, isAdmin, open, transaction]);
 
@@ -145,20 +150,17 @@ export function QuickEntryDialog({
     if (!Number.isFinite(grossAmount) || grossAmount < 0) return null;
     if (!Number.isFinite(customFee) || customFee < 0) return null;
     try {
-      return calculateTransaction(
-        {
-          grossAmount,
-          customFee,
-          currency: form.currency,
-          exchangeRateAtCreation: lockedRate,
-          tax_model: form.tax_model,
-        },
-        rates.toEur[form.currency],
-      );
+      return calculateFinancialBreakdown({
+        gross: grossAmount,
+        platformFee: customFee,
+        currency: form.currency,
+        exchangeRate: lockedRate,
+        taxModel: form.tax_model,
+      });
     } catch {
       return null;
     }
-  }, [customFee, form.currency, form.tax_model, grossAmount, lockedRate, rates.toEur]);
+  }, [customFee, form.currency, form.tax_model, grossAmount, lockedRate]);
   const previewRates = useMemo(
     () => ({
       ...rates,

@@ -1,8 +1,10 @@
 import { describe, expect, it, vi } from "vitest";
 import {
   isTaxModelSchemaCacheError,
+  isUahAmountSchemaCacheError,
   resolveRowTaxModel,
   stripTaxModelFromRows,
+  stripUahAmountsFromRows,
   transactionToRow,
   writeProjectsWithTaxModelFallback,
 } from "@/services/supabase-projects";
@@ -22,12 +24,24 @@ const transaction: Transaction = {
 };
 
 describe("resolveRowTaxModel", () => {
-  it("falls back to spain_19 for undefined, null, or unknown values", () => {
-    expect(resolveRowTaxModel(undefined)).toBe("spain_19");
-    expect(resolveRowTaxModel(null)).toBe("spain_19");
-    expect(resolveRowTaxModel("")).toBe("spain_19");
-    expect(resolveRowTaxModel("vat_20")).toBe("spain_19");
-    expect(resolveRowTaxModel("spain_19")).toBe("spain_19");
+  it("honors an explicit stored model and infers FOP after the September 2026 cutover", () => {
+    expect(resolveRowTaxModel("fop_3", { startDate: "2026-08-01" })).toBe("fop_3");
+    expect(resolveRowTaxModel("spain_19", { startDate: "2026-09-29" })).toBe("spain_19");
+    expect(resolveRowTaxModel(undefined, { startDate: "2026-09-01" })).toBe("fop_3");
+    expect(resolveRowTaxModel(null, { date: "2026-09-15" })).toBe("fop_3");
+    expect(resolveRowTaxModel(undefined, { startDate: "2026-08-31" })).toBe("spain_19");
+    expect(
+      resolveRowTaxModel(undefined, {
+        startDate: "2026-08-01",
+        createdByEmail: "workspacetechdef@gmail.com",
+      }),
+    ).toBe("fop_3");
+  });
+
+  it("falls back to spain_19 for unknown values on legacy dates", () => {
+    expect(resolveRowTaxModel(undefined, { startDate: "2026-08-29" })).toBe("spain_19");
+    expect(resolveRowTaxModel("", { date: "2026-08-29" })).toBe("spain_19");
+    expect(resolveRowTaxModel("vat_20", { startDate: "2026-08-29" })).toBe("spain_19");
   });
 
   it("keeps fop_3 when present", () => {
@@ -37,14 +51,30 @@ describe("resolveRowTaxModel", () => {
 });
 
 describe("transactionToRow", () => {
-  it("writes spain_19 when tax_model is missing", () => {
-    expect(transactionToRow(transaction, "user_1").tax_model).toBe("spain_19");
+  it("writes fop_3 for post-cutover projects when tax_model is missing", () => {
+    expect(transactionToRow(transaction, "user_1").tax_model).toBe("fop_3");
+  });
+
+  it("writes spain_19 for legacy pre-cutover projects when tax_model is missing", () => {
+    expect(
+      transactionToRow({ ...transaction, date: "2026-08-15", startDate: "2026-08-15" }, "user_1")
+        .tax_model,
+    ).toBe("spain_19");
   });
 
   it("writes fop_3 when the transaction uses that model", () => {
     expect(transactionToRow({ ...transaction, tax_model: "fop_3" }, "user_1").tax_model).toBe(
       "fop_3",
     );
+  });
+
+  it("does not override an explicit fop_3 on a legacy date", () => {
+    expect(
+      transactionToRow(
+        { ...transaction, date: "2026-08-15", startDate: "2026-08-15", tax_model: "fop_3" },
+        "user_1",
+      ).tax_model,
+    ).toBe("fop_3");
   });
 });
 
@@ -75,6 +105,23 @@ describe("isTaxModelSchemaCacheError", () => {
       }),
     ).toBe(false);
     expect(isTaxModelSchemaCacheError(null)).toBe(false);
+    expect(
+      isTaxModelSchemaCacheError({
+        code: "PGRST204",
+        message: "Could not find the 'gross_uah' column of 'projects' in the schema cache",
+      }),
+    ).toBe(false);
+  });
+});
+
+describe("isUahAmountSchemaCacheError", () => {
+  it("detects UAH column schema-cache misses without treating them as tax_model errors", () => {
+    const error = {
+      code: "PGRST204",
+      message: "Could not find the 'gross_uah' column of 'projects' in the schema cache",
+    };
+    expect(isUahAmountSchemaCacheError(error)).toBe(true);
+    expect(isTaxModelSchemaCacheError(error)).toBe(false);
   });
 });
 
@@ -89,7 +136,7 @@ describe("writeProjectsWithTaxModelFallback", () => {
     const rows = [transactionToRow(transaction, "user_1")];
     await writeProjectsWithTaxModelFallback(write, rows);
     expect(write).toHaveBeenCalledTimes(1);
-    expect(firstWrittenRow(write, 0)).toHaveProperty("tax_model", "spain_19");
+    expect(firstWrittenRow(write, 0)).toHaveProperty("tax_model", "fop_3");
   });
 
   it("strips tax_model and retries on PGRST204 instead of crashing", async () => {
@@ -115,6 +162,44 @@ describe("writeProjectsWithTaxModelFallback", () => {
     warn.mockRestore();
   });
 
+  it("strips UAH columns on PGRST204 while keeping tax_model", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    const write = vi
+      .fn()
+      .mockResolvedValueOnce({
+        error: {
+          code: "PGRST204",
+          message: "Could not find the 'gross_uah' column of 'projects' in the schema cache",
+        },
+      })
+      .mockResolvedValueOnce({ error: null });
+
+    const rows = [
+      transactionToRow(
+        {
+          ...transaction,
+          tax_model: "fop_3",
+          uahRateAtCreation: 45.5,
+          gross_uah: 45500,
+          net_uah: 25000,
+        },
+        "user_1",
+      ),
+    ];
+    await writeProjectsWithTaxModelFallback(write, rows);
+
+    expect(write).toHaveBeenCalledTimes(2);
+    expect(firstWrittenRow(write, 0)).toHaveProperty("tax_model", "fop_3");
+    expect(firstWrittenRow(write, 0)).toHaveProperty("gross_uah", 45500);
+    expect(firstWrittenRow(write, 1)).toHaveProperty("tax_model", "fop_3");
+    expect(firstWrittenRow(write, 1)).not.toHaveProperty("gross_uah");
+    expect(firstWrittenRow(write, 1)).not.toHaveProperty("net_uah");
+    expect(firstWrittenRow(write, 1)).not.toHaveProperty("uah_rate_at_creation");
+    expect(warn).toHaveBeenCalledOnce();
+    expect(String(warn.mock.calls[0]?.[0])).toMatch(/UAH/);
+    warn.mockRestore();
+  });
+
   it("rethrows errors that are not a tax_model schema-cache miss", async () => {
     const write = vi.fn(async () => ({
       error: { code: "42501", message: "permission denied for table projects" },
@@ -128,8 +213,29 @@ describe("writeProjectsWithTaxModelFallback", () => {
 
 describe("stripTaxModelFromRows", () => {
   it("removes tax_model from an otherwise intact payload", () => {
-    const [row] = stripTaxModelFromRows([transactionToRow(transaction, "user_1")]);
+    const [row] = stripTaxModelFromRows([
+      transactionToRow(
+        { ...transaction, tax_model: "fop_3", gross_uah: 1000, net_uah: 600, uahRateAtCreation: 41 },
+        "user_1",
+      ),
+    ]);
     expect(row).not.toHaveProperty("tax_model");
     expect(row.title).toBe("Landing");
+    expect(row).toHaveProperty("gross_uah", 1000);
+  });
+});
+
+describe("stripUahAmountsFromRows", () => {
+  it("removes UAH snapshot fields while keeping tax_model", () => {
+    const [row] = stripUahAmountsFromRows([
+      transactionToRow(
+        { ...transaction, tax_model: "fop_3", gross_uah: 1000, net_uah: 600, uahRateAtCreation: 41 },
+        "user_1",
+      ),
+    ]);
+    expect(row.tax_model).toBe("fop_3");
+    expect(row).not.toHaveProperty("gross_uah");
+    expect(row).not.toHaveProperty("net_uah");
+    expect(row).not.toHaveProperty("uah_rate_at_creation");
   });
 });

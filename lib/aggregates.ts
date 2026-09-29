@@ -1,11 +1,8 @@
 import Decimal from "decimal.js";
 import { monthKeyFromIsoDate, weekKeyFromIsoDate } from "@/lib/week";
 import { formatWeekSpan } from "@/lib/format";
-import {
-  calculateTransaction,
-  convertToDisplay,
-  moneyNumber,
-} from "@/lib/tax-calculator";
+import { calculateTransaction } from "@/lib/finance";
+import { convertToDisplay, moneyNumber } from "@/lib/tax-calculator";
 import {
   getTransactionStartDate,
   type Currency,

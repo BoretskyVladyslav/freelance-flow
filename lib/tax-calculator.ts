@@ -2,6 +2,7 @@ import Decimal from "decimal.js";
 import { LAST_RESORT_RATES, uahPerUnit } from "@/lib/exchange-rates";
 import {
   BASE_CURRENCY,
+  getTaxModel,
   type Currency,
   type ExchangeRates,
   type LedgerFilters,
@@ -106,6 +107,25 @@ export function calculateTaxSequence(input: TaxSequenceInput): HistoricalTaxResu
   };
 }
 
+export type FinancialBreakdownInput = {
+  gross: number;
+  platformFee: number;
+  currency: Currency;
+  exchangeRate: number;
+  taxModel: TaxModel;
+};
+
+export function calculateFinancialBreakdown(
+  input: FinancialBreakdownInput,
+): HistoricalTaxResult {
+  return calculateTaxSequence({
+    grossAmount: input.gross,
+    customFee: input.platformFee,
+    exchangeRate: input.exchangeRate,
+    taxModel: input.taxModel,
+  });
+}
+
 export function calculateProjectTaxes(
   gross: number,
   taxModel: TaxModel = "spain_19",
@@ -127,14 +147,16 @@ export function calculateProjectTaxes(
 export function calculateTransaction(
   transaction: Pick<
     Transaction,
-    "grossAmount" | "customFee" | "exchangeRateAtCreation" | "currency" | "tax_model"
-  >,
+    "grossAmount" | "customFee" | "exchangeRateAtCreation" | "currency"
+  > &
+    Partial<Pick<Transaction, "tax_model" | "startDate" | "date">>,
   liveToEur?: number,
 ): TaxBreakdown {
-  const taxModel = transaction.tax_model === "fop_3" ? "fop_3" : "spain_19";
-  const historical = calculateTaxSequence({
-    grossAmount: transaction.grossAmount,
-    customFee: transaction.customFee,
+  const taxModel = getTaxModel(transaction);
+  const historical = calculateFinancialBreakdown({
+    gross: transaction.grossAmount,
+    platformFee: transaction.customFee,
+    currency: transaction.currency,
     exchangeRate: transaction.exchangeRateAtCreation,
     taxModel,
   });
@@ -144,9 +166,10 @@ export function calculateTransaction(
       ? liveToEur
       : transaction.exchangeRateAtCreation;
 
-  const live = calculateTaxSequence({
-    grossAmount: transaction.grossAmount,
-    customFee: transaction.customFee,
+  const live = calculateFinancialBreakdown({
+    gross: transaction.grossAmount,
+    platformFee: transaction.customFee,
+    currency: transaction.currency,
     exchangeRate: liveRate,
     taxModel,
   });
@@ -217,6 +240,29 @@ function ratesWithLockedToEur(
     ...source,
     toEur: { ...source.toEur, [currency]: lockedToEur },
   };
+}
+
+export function eurAmountToLockedUah(
+  amountEur: number,
+  input: {
+    currency: Currency;
+    exchangeRateAtCreation: number;
+    rates: ExchangeRates | null | undefined;
+    uahRateAtCreation?: number;
+  },
+): number {
+  const lockedRates = ratesWithLockedToEur(
+    input.currency,
+    input.exchangeRateAtCreation,
+    input.rates,
+  );
+  const original = convertToDisplay(amountEur, input.currency, lockedRates);
+  return convertOriginalToUah(
+    original,
+    input.currency,
+    lockedRates,
+    input.uahRateAtCreation,
+  );
 }
 
 export function convertOriginalToUah(

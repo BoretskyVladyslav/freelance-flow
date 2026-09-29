@@ -5,6 +5,7 @@ import {
   getTaxModel,
   getTransactionStartDate,
   parseBackup,
+  resolveTaxModel,
   type BackupEnvelope,
   type Transaction,
 } from "@/types/finance";
@@ -225,9 +226,34 @@ describe("defaultTaxModelForCreator", () => {
     ).toBe("fop_3");
   });
 
-  it("keeps Spain 19% for non-admin creators", () => {
+  it("keeps Spain 19% for non-admin creators without a cutover start date", () => {
     expect(defaultTaxModelForCreator({ isAdmin: false, email: "dev@example.com" })).toBe(
       "spain_19",
     );
+  });
+
+  it("defaults non-admin projects on or after 2026-09-01 to FOP 3", () => {
+    expect(
+      defaultTaxModelForCreator({
+        isAdmin: false,
+        email: "dev@example.com",
+        startDate: "2026-09-01",
+      }),
+    ).toBe("fop_3");
+  });
+});
+
+describe("resolveTaxModel", () => {
+  it("honors an explicit stored model", () => {
+    expect(resolveTaxModel({ tax_model: "fop_3", startDate: "2026-08-01" })).toBe("fop_3");
+    expect(resolveTaxModel({ tax_model: "spain_19", startDate: "2026-09-29" })).toBe("spain_19");
+  });
+
+  it("infers FOP 3 from the cutover date or admin creator when the model is missing", () => {
+    expect(resolveTaxModel({ startDate: "2026-09-01" })).toBe("fop_3");
+    expect(resolveTaxModel({ date: "2026-08-15", createdByEmail: "workspacetechdef@gmail.com" })).toBe(
+      "fop_3",
+    );
+    expect(resolveTaxModel({ startDate: "2026-08-31" })).toBe("spain_19");
   });
 });

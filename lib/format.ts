@@ -44,6 +44,15 @@ export function formatAmountWithUahApprox(
   return `${primary} (≈ ${formatPlainAmount(amountUah)} грн)`;
 }
 
+export function formatLedgerTaxTooltip(taxModel: "fop_3" | "spain_19", taxesUah: number, feeUah: number): string {
+  const taxesFormatted = `${formatPlainAmount(taxesUah)} грн`;
+  const feeFormatted = `${formatPlainAmount(feeUah)} грн`;
+  if (taxModel === "fop_3") {
+    return `ФОП (5% + 1%): ${taxesFormatted} | Фірма (30%): ${feeFormatted}`;
+  }
+  return `Іспанія (19%): ${taxesFormatted} | Фірма (30%): ${feeFormatted}`;
+}
+
 export function formatGrossUahTooltip(
   grossUah: number,
   uahPerUnitRate: number,

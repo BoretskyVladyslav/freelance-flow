@@ -57,11 +57,11 @@ export function formatTransactionTelegram(row: TransactionView): string {
     client ? `👤 Клієнт: ${client}` : "",
     DIVIDER,
     `💰 Валовий (Gross): ${gross} ${currency}`,
-    getTaxModel(row.tax_model) === "fop_3"
+    getTaxModel(row) === "fop_3"
       ? `🏢 Комісія фірми (30%): -${companyTax} ${currency}`
-      : formatTelegramTaxLine(row.tax_model, spainTax, currency),
-    getTaxModel(row.tax_model) === "fop_3"
-      ? formatTelegramTaxLine(row.tax_model, spainTax, currency)
+      : formatTelegramTaxLine(getTaxModel(row), spainTax, currency),
+    getTaxModel(row) === "fop_3"
+      ? formatTelegramTaxLine(getTaxModel(row), spainTax, currency)
       : `🏢 Комісія фірми (30%): -${companyTax} ${currency}`,
     DIVIDER,
     `✅ До виплати (Net): ${net} ${currency}`,

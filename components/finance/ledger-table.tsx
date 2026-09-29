@@ -36,12 +36,12 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { useFinance } from "@/components/finance/finance-provider";
-import { formatMoney, formatGrossUahTooltip, formatSignedMoney, formatWeekSpan } from "@/lib/format";
+import { formatMoney, formatGrossUahTooltip, formatLedgerTaxTooltip, formatSignedMoney, formatWeekSpan } from "@/lib/format";
 import { formatTransactionTelegram } from "@/lib/telegram-copy";
 import { FormattedDate } from "@/components/ui/formatted-date";
 import { cn } from "@/lib/utils";
 import { PLATFORM_LABELS, STATUS_LABELS } from "@/lib/labels";
-import { convertOriginalToUah, convertToDisplay, moneyNumber } from "@/lib/tax-calculator";
+import { convertOriginalToUah, convertToDisplay, eurAmountToLockedUah, moneyNumber } from "@/lib/tax-calculator";
 import { uahPerUnit } from "@/lib/exchange-rates";
 import { weekKeyFromIsoDate } from "@/lib/week";
 import type { TransactionView } from "@/lib/aggregates";
@@ -169,19 +169,18 @@ const RowActions = memo(function RowActions({
 
 const TaxDetails = memo(function TaxDetails({ row }: { row: TransactionView }) {
   const { displayCurrency, rates } = useFinance();
+  const taxModel = getTaxModel(row);
   const totalTaxEur = moneyNumber(row.breakdown.spainTax + row.breakdown.companyTax);
   const totalTaxDisplay = convertToDisplay(totalTaxEur, displayCurrency, rates);
-  const spainTax = formatMoney(
-    convertToDisplay(row.breakdown.spainTax, displayCurrency, rates),
-    displayCurrency,
-  );
-  const companyTax = formatMoney(
-    convertToDisplay(row.breakdown.companyTax, displayCurrency, rates),
-    displayCurrency,
-  );
-  const taxLabel =
-    getTaxModel(row.tax_model) === "fop_3" ? "ФОП (5% + 1%)" : "Іспанія (19%)";
-  const summary = `${taxLabel}: ${spainTax} | Фірма (30%): ${companyTax}`;
+  const lockedUahInput = {
+    currency: row.currency,
+    exchangeRateAtCreation: row.exchangeRateAtCreation,
+    rates,
+    uahRateAtCreation: row.uahRateAtCreation,
+  };
+  const taxesUah = eurAmountToLockedUah(row.breakdown.spainTax, lockedUahInput);
+  const feeUah = eurAmountToLockedUah(row.breakdown.companyTax, lockedUahInput);
+  const summary = formatLedgerTaxTooltip(taxModel, taxesUah, feeUah);
 
   return (
     <Tooltip>

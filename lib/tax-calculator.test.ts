@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { calculateFinancialBreakdown } from "@/lib/finance";
 import { normalizeEurRates, uahPerUnit } from "@/lib/exchange-rates";
 import {
   calculateProjectTaxes,
@@ -8,6 +9,7 @@ import {
   convertOriginalToUah,
   convertToDisplay,
   displayCurrencyGainLoss,
+  eurAmountToLockedUah,
   moneyNumber,
   MONTHLY_ESV_UAH,
   monthlyEsvDisplayAmount,
@@ -15,6 +17,7 @@ import {
   resolveUahSnapshot,
   shouldApplyMonthlyEsv,
 } from "@/lib/tax-calculator";
+import { formatLedgerTaxTooltip } from "@/lib/format";
 
 describe("calculateTaxSequence", () => {
   it("rounds every mandated step to 2 decimals", () => {
@@ -325,5 +328,132 @@ describe("UAH snapshot and monthly ESV", () => {
     expect(shouldApplyMonthlyEsv({ month: "all" })).toBe(false);
     expect(monthlyEsvDisplayAmount("UAH", rates)).toBe(1760);
     expect(netAfterMonthlyEsv(5000, "UAH", rates)).toBe(3240);
+  });
+});
+
+describe("calculateFinancialBreakdown", () => {
+  const input = {
+    gross: 1000,
+    platformFee: 50,
+    currency: "USD" as const,
+    exchangeRate: 0.9,
+    taxModel: "fop_3" as const,
+  };
+
+  it("matches calculateTransaction historical figures for the same modal and ledger inputs", () => {
+    const modal = calculateFinancialBreakdown(input);
+    const ledger = calculateTransaction(
+      {
+        grossAmount: input.gross,
+        customFee: input.platformFee,
+        currency: input.currency,
+        exchangeRateAtCreation: input.exchangeRate,
+        tax_model: input.taxModel,
+      },
+      0.95,
+    );
+
+    expect(modal).toEqual({
+      grossInBase: 900,
+      feeInBase: 45,
+      taxableBase: 855,
+      spainTax: 51.3,
+      postSpainBase: 803.7,
+      companyTax: 256.5,
+      netPayout: 547.2,
+    });
+    expect(ledger.grossInBase).toBe(modal.grossInBase);
+    expect(ledger.feeInBase).toBe(modal.feeInBase);
+    expect(ledger.taxableBase).toBe(modal.taxableBase);
+    expect(ledger.spainTax).toBe(modal.spainTax);
+    expect(ledger.companyTax).toBe(modal.companyTax);
+    expect(ledger.netPayout).toBe(modal.netPayout);
+  });
+
+  it("uses FOP math for post-cutover ledger rows even when tax_model is missing", () => {
+    const modal = calculateFinancialBreakdown(input);
+    const ledger = calculateTransaction({
+      grossAmount: input.gross,
+      customFee: input.platformFee,
+      currency: input.currency,
+      exchangeRateAtCreation: input.exchangeRate,
+      date: "2026-09-15",
+      startDate: "2026-09-15",
+    });
+
+    expect(ledger.spainTax).toBe(modal.spainTax);
+    expect(ledger.companyTax).toBe(modal.companyTax);
+    expect(ledger.netPayout).toBe(modal.netPayout);
+  });
+
+  it("keeps Spain 19% for pre-cutover rows without a stored model", () => {
+    const spain = calculateFinancialBreakdown({ ...input, taxModel: "spain_19" });
+    const ledger = calculateTransaction({
+      grossAmount: input.gross,
+      customFee: input.platformFee,
+      currency: input.currency,
+      exchangeRateAtCreation: input.exchangeRate,
+      date: "2026-08-15",
+      startDate: "2026-08-15",
+    });
+
+    expect(ledger.spainTax).toBe(spain.spainTax);
+    expect(ledger.companyTax).toBe(spain.companyTax);
+    expect(ledger.netPayout).toBe(spain.netPayout);
+  });
+});
+
+describe("formatLedgerTaxTooltip", () => {
+  it("labels FOP and Spain tooltips in locked UAH", () => {
+    expect(formatLedgerTaxTooltip("fop_3", 2331.82, 11659.09)).toBe(
+      "ФОП (5% + 1%): 2 331,82 грн | Фірма (30%): 11 659,09 грн",
+    );
+    expect(formatLedgerTaxTooltip("spain_19", 7384.09, 9443.18)).toBe(
+      "Іспанія (19%): 7 384,09 грн | Фірма (30%): 9 443,18 грн",
+    );
+  });
+});
+
+describe("eurAmountToLockedUah", () => {
+  const rates = {
+    base: "EUR" as const,
+    fetchedAt: "2026-09-02T00:00:00.000Z",
+    toEur: {
+      EUR: 1,
+      USD: 0.9,
+      UAH: 0.022,
+      PLN: 0.23,
+    },
+  };
+
+  it("converts modal and ledger EUR tax amounts with the same locked UAH rate", () => {
+    const breakdown = calculateFinancialBreakdown({
+      gross: 1000,
+      platformFee: 50,
+      currency: "USD",
+      exchangeRate: 0.9,
+      taxModel: "fop_3",
+    });
+    const taxesUah = eurAmountToLockedUah(breakdown.spainTax, {
+      currency: "USD",
+      exchangeRateAtCreation: 0.9,
+      rates,
+      uahRateAtCreation: 40.90909091,
+    });
+    const feeUah = eurAmountToLockedUah(breakdown.companyTax, {
+      currency: "USD",
+      exchangeRateAtCreation: 0.9,
+      rates,
+      uahRateAtCreation: 40.90909091,
+    });
+
+    expect(taxesUah).toBe(eurAmountToLockedUah(breakdown.spainTax, {
+      currency: "USD",
+      exchangeRateAtCreation: 0.9,
+      rates,
+      uahRateAtCreation: 40.90909091,
+    }));
+    expect(formatLedgerTaxTooltip("fop_3", taxesUah, feeUah)).toContain("ФОП (5% + 1%)");
+    expect(formatLedgerTaxTooltip("fop_3", taxesUah, feeUah)).toContain("грн");
   });
 });
