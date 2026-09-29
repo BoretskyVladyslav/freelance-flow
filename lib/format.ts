@@ -44,6 +44,14 @@ export function formatAmountWithUahApprox(
   return `${primary} (≈ ${formatPlainAmount(amountUah)} грн)`;
 }
 
+export function formatGrossUahTooltip(
+  grossUah: number,
+  uahPerUnitRate: number,
+  currency: Currency,
+): string {
+  return `≈ ${formatPlainAmount(grossUah)} грн | Курс: ${formatRate(uahPerUnitRate)} UAH/${currency}`;
+}
+
 export function formatMonthlyEsvNote(): string {
   return `Резерв ЄСВ за місяць: ${formatPlainAmount(MONTHLY_ESV_UAH)} грн (фіксовано 22% від МЗП)`;
 }

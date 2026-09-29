@@ -36,12 +36,13 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { useFinance } from "@/components/finance/finance-provider";
-import { formatMoney, formatSignedMoney, formatWeekSpan } from "@/lib/format";
+import { formatMoney, formatGrossUahTooltip, formatSignedMoney, formatWeekSpan } from "@/lib/format";
 import { formatTransactionTelegram } from "@/lib/telegram-copy";
 import { FormattedDate } from "@/components/ui/formatted-date";
 import { cn } from "@/lib/utils";
 import { PLATFORM_LABELS, STATUS_LABELS } from "@/lib/labels";
-import { convertToDisplay, moneyNumber } from "@/lib/tax-calculator";
+import { convertOriginalToUah, convertToDisplay, moneyNumber } from "@/lib/tax-calculator";
+import { uahPerUnit } from "@/lib/exchange-rates";
 import { weekKeyFromIsoDate } from "@/lib/week";
 import type { TransactionView } from "@/lib/aggregates";
 import {
@@ -196,6 +197,41 @@ const TaxDetails = memo(function TaxDetails({ row }: { row: TransactionView }) {
   );
 });
 
+const GrossAmount = memo(function GrossAmount({ row }: { row: TransactionView }) {
+  const { rates } = useFinance();
+  const amount = formatMoney(row.grossAmount, row.currency);
+  if (row.currency === "UAH") {
+    return <span className="tabular-nums">{amount}</span>;
+  }
+
+  const uahRate =
+    row.uahRateAtCreation && Number.isFinite(row.uahRateAtCreation) && row.uahRateAtCreation > 0
+      ? row.uahRateAtCreation
+      : uahPerUnit(row.currency, rates);
+  const grossUah =
+    typeof row.gross_uah === "number" && Number.isFinite(row.gross_uah)
+      ? row.gross_uah
+      : convertOriginalToUah(row.grossAmount, row.currency, rates, uahRate);
+  const summary = formatGrossUahTooltip(grossUah, uahRate, row.currency);
+
+  return (
+    <Tooltip>
+      <TooltipTrigger
+        render={
+          <span
+            className="cursor-help tabular-nums underline decoration-dotted decoration-muted-foreground/70 underline-offset-2"
+          />
+        }
+        onPointerDown={(event) => event.stopPropagation()}
+        onClick={(event) => event.stopPropagation()}
+      >
+        {amount}
+      </TooltipTrigger>
+      <TooltipContent className="max-w-xs text-left">{summary}</TooltipContent>
+    </Tooltip>
+  );
+});
+
 export function LedgerTable({ onEdit }: LedgerTableProps) {
   const { filteredViews, displayCurrency, rates, deleteTransaction, hydrated } = useFinance();
   const [pendingDelete, setPendingDelete] = useState<Transaction | null>(null);
@@ -261,7 +297,9 @@ export function LedgerTable({ onEdit }: LedgerTableProps) {
                 </div>
                 <div className="min-w-0">
                   <p className="text-[11px] text-muted-foreground">Gross</p>
-                  <p className="tabular-nums">{formatMoney(row.grossAmount, row.currency)}</p>
+                  <p className="min-w-0">
+                    <GrossAmount row={row} />
+                  </p>
                 </div>
                 <div className="min-w-0">
                   <p className="text-[11px] text-muted-foreground">Статус</p>
@@ -366,7 +404,7 @@ export function LedgerTable({ onEdit }: LedgerTableProps) {
                 </Badge>
               </TableCell>
               <TableCell className={cn(compactCell, "w-[12%] tabular-nums")}>
-                {formatMoney(row.grossAmount, row.currency)}
+                <GrossAmount row={row} />
               </TableCell>
               <TableCell className={cn(compactCell, "hidden w-[12%] md:table-cell")}>
                 <TaxDetails row={row} />
