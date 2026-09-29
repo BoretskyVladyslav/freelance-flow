@@ -4,6 +4,7 @@ import { createBrowserSupabaseClient } from "@/lib/supabase/client";
 import {
   ensureProjectUuid,
   transactionToRow,
+  writeProjectsWithTaxModelFallback,
 } from "@/services/supabase-projects";
 
 const MIGRATION_FLAG = "freelance-flow/cloud-migration-done";
@@ -85,10 +86,10 @@ export async function migrateLocalToSupabase(): Promise<LocalMigrationResult> {
   }
 
   if (rows.length > 0) {
-    const { error: insertError } = await supabase.from("projects").insert(rows);
-    if (insertError) {
-      throw new Error(insertError.message);
-    }
+    await writeProjectsWithTaxModelFallback(async (payload) => {
+      const { error } = await supabase.from("projects").insert(payload);
+      return { error };
+    }, rows);
   }
 
   markCloudMigrationDone();

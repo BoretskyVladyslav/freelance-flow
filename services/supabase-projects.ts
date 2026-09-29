@@ -10,7 +10,7 @@ import {
   isCurrency,
   isPaymentStatus,
   isPlatform,
-  isTaxModel,
+  type TaxModel,
   type Transaction,
 } from "@/types/finance";
 import type { Database } from "@/types/database";
@@ -18,19 +18,68 @@ import type { Database } from "@/types/database";
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
+export const TAX_MODEL_SCHEMA_CACHE_WARNING =
+  "[freelance-flow] Supabase schema cache is missing projects.tax_model (PGRST204). Retrying the save without tax_model so the UI does not crash. Apply supabase_fop_tax_migration.sql and reload the PostgREST schema cache.";
+
 export function ensureProjectUuid(id: string): string {
   return UUID_RE.test(id) ? id : crypto.randomUUID();
 }
 
 type ProjectRow = Database["public"]["Tables"]["projects"]["Row"];
 type ProjectInsert = Database["public"]["Tables"]["projects"]["Insert"];
+type ProjectRowLike = Omit<ProjectRow, "tax_model"> & { tax_model?: string | null };
+type ProjectWriteResult = { error: { code?: string | null; message?: string | null } | null };
 
 function toIsoDate(value: string | null | undefined): string | undefined {
   if (!value) return undefined;
   return value.slice(0, 10);
 }
 
-function rowToTransaction(row: ProjectRow): Transaction | null {
+export function resolveRowTaxModel(value: unknown): TaxModel {
+  const fallback = value ?? "spain_19";
+  return fallback === "fop_3" ? "fop_3" : "spain_19";
+}
+
+export function isTaxModelSchemaCacheError(
+  error: { code?: string | null; message?: string | null } | null | undefined,
+): boolean {
+  if (!error) return false;
+  const code = String(error.code ?? "").toUpperCase();
+  const message = String(error.message ?? "").toLowerCase();
+  if (code === "PGRST204") return true;
+  if (code === "42703" && message.includes("tax_model")) return true;
+  return (
+    message.includes("tax_model") &&
+    (message.includes("schema cache") ||
+      message.includes("could not find") ||
+      message.includes("does not exist"))
+  );
+}
+
+export function stripTaxModelFromRows(rows: ProjectInsert[]): Array<Omit<ProjectInsert, "tax_model">> {
+  return rows.map((row) => {
+    const { tax_model: _taxModel, ...rest } = row;
+    return rest;
+  });
+}
+
+export async function writeProjectsWithTaxModelFallback(
+  write: (rows: ProjectInsert[]) => Promise<ProjectWriteResult>,
+  rows: ProjectInsert[],
+): Promise<void> {
+  const first = await write(rows);
+  if (!first.error) return;
+  if (!isTaxModelSchemaCacheError(first.error)) {
+    throw new Error(first.error.message ?? "Не вдалося зберегти проєкти.");
+  }
+  console.warn(TAX_MODEL_SCHEMA_CACHE_WARNING);
+  const retry = await write(stripTaxModelFromRows(rows) as ProjectInsert[]);
+  if (retry.error) {
+    throw new Error(retry.error.message ?? "Не вдалося зберегти проєкти.");
+  }
+}
+
+function rowToTransaction(row: ProjectRowLike): Transaction | null {
   if (!isPlatform(row.platform) || !isCurrency(row.currency) || !isPaymentStatus(row.status)) {
     return null;
   }
@@ -54,7 +103,7 @@ function rowToTransaction(row: ProjectRow): Transaction | null {
     notes: row.notes ?? undefined,
     employeeId: row.employee_id,
     createdBy: row.created_by ?? undefined,
-    tax_model: isTaxModel(row.tax_model) ? row.tax_model : "spain_19",
+    tax_model: resolveRowTaxModel(row.tax_model ?? "spain_19"),
   };
 }
 
@@ -78,7 +127,7 @@ export function transactionToRow(transaction: Transaction, userId: string): Proj
     status: transaction.status,
     week_number: transaction.weekNumber,
     notes: transaction.notes ?? null,
-    tax_model: transaction.tax_model === "fop_3" ? "fop_3" : "spain_19",
+    tax_model: resolveRowTaxModel(transaction.tax_model),
   };
 }
 
@@ -106,7 +155,7 @@ export const supabaseProjectsRepository = {
     }
 
     const transactions = (data ?? [])
-      .map(rowToTransaction)
+      .map((row) => rowToTransaction(row as ProjectRowLike))
       .filter((row): row is Transaction => row !== null);
 
     return {
@@ -163,8 +212,10 @@ export const supabaseProjectsRepository = {
         }
         return row;
       });
-      const { error: upsertError } = await supabase.from("projects").upsert(rows, { onConflict: "id" });
-      if (upsertError) throw new Error(upsertError.message);
+      await writeProjectsWithTaxModelFallback(async (payload) => {
+        const { error } = await supabase.from("projects").upsert(payload, { onConflict: "id" });
+        return { error };
+      }, rows);
     }
 
     await savePreferences({
