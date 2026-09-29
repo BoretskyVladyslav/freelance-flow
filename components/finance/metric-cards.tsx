@@ -64,8 +64,8 @@ export function MetricCards() {
       title: "Податок фірми (30%)",
       value: formatMoney(displayTotals.companyTax, displayCurrency),
       description: isAdmin && teamScope === "all"
-        ? "Агрегація по компанії. ФОП: 30% від бази. Іспанія: 30% після податку."
-        : "ФОП: 30% від бази. Іспанія: 30% після податку.",
+        ? "Агрегація по компанії. ФОП: 30% від бази, потім 6% від залишку. Іспанія: 30% після податку."
+        : "ФОП: 30% від бази, потім 6% від залишку. Іспанія: 30% після податку.",
       icon: Building2,
       valueClass: "text-rose-600 dark:text-rose-400",
     },

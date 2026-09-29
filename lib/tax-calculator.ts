@@ -76,16 +76,15 @@ export function calculateTaxSequence(input: TaxSequenceInput): HistoricalTaxResu
 
   if (input.taxModel === "fop_3") {
     const companyTax = roundMoney(taxableBase.times(COMPANY_TAX_RATE));
-    const spainTax = roundMoney(taxableBase.times(FOP_TAX_RATE));
-    const afterCompany = roundMoney(taxableBase.minus(companyTax));
-    const netPayout = roundMoney(afterCompany.minus(spainTax));
-    const postSpainBase = roundMoney(taxableBase.minus(spainTax));
+    const remainderAfterFirm = roundMoney(taxableBase.minus(companyTax));
+    const spainTax = roundMoney(remainderAfterFirm.times(FOP_TAX_RATE));
+    const netPayout = roundMoney(remainderAfterFirm.minus(spainTax));
     return {
       grossInBase: grossInBase.toNumber(),
       feeInBase: feeInBase.toNumber(),
       taxableBase: taxableBase.toNumber(),
       spainTax: spainTax.toNumber(),
-      postSpainBase: postSpainBase.toNumber(),
+      postSpainBase: remainderAfterFirm.toNumber(),
       companyTax: companyTax.toNumber(),
       netPayout: netPayout.toNumber(),
     };

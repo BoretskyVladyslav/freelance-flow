@@ -83,13 +83,13 @@ describe("formatTransactionTelegram", () => {
     expect(text).not.toContain("Клієнт");
   });
 
-  it("formats FOP tax for a fop_3 project with fee taken from the taxable base", () => {
+  it("formats FOP tax for a fop_3 project with fee first, then tax on the remainder", () => {
     const [view] = withBreakdowns([{ ...usd, tax_model: "fop_3" }], LAST_RESORT_RATES);
     const text = formatTransactionTelegram(view);
 
     expect(text).toContain("🏢 Комісія фірми (30%): -285,00 USD");
-    expect(text).toContain("🏛 Податки ФОП (5% ЄП + 1% ВЗ): -57,00 USD");
-    expect(text).toContain("✅ До виплати (Net): 608,00 USD");
+    expect(text).toContain("🏛 Податки ФОП (5% ЄП + 1% ВЗ): -39,90 USD");
+    expect(text).toContain("✅ До виплати (Net): 625,10 USD");
     expect(text).not.toContain("Податок Іспанії");
     const companyIndex = text.indexOf("Комісія фірми");
     const taxIndex = text.indexOf("Податки ФОП");

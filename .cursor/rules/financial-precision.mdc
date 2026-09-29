@@ -25,6 +25,8 @@ const taxableBase = roundMoney(grossInBase.minus(feeInBase));
 const spainTax = roundMoney(taxableBase.times("0.19"));
 ```
 
-Sequence: grossInBase → feeInBase → taxableBase → spainTax (19%) → postSpainBase → companyTax (30%) → netPayout.
+Spain sequence: grossInBase → feeInBase → taxableBase → spainTax (19%) → postSpainBase → companyTax (30%) → netPayout.
+
+FOP 3 sequence (cascading): grossInBase → feeInBase → taxableBase → companyTax (30% of base) → remainderAfterFirm → spainTax (6% of remainder) → netPayout.
 
 Any change to tax, rounding, FX conversion, storage compatibility, or backup parsing requires tests in `lib/tax-calculator.test.ts` and `types/finance.test.ts`.

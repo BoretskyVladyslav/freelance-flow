@@ -71,7 +71,7 @@ describe("calculateTaxSequence", () => {
     expect(pln.taxableBase).toBe(225.4);
   });
 
-  it("applies FOP 30% fee and 6% tax from the same taxable base", () => {
+  it("applies FOP 30% fee first, then 6% tax on the remainder", () => {
     const result = calculateTaxSequence({
       grossAmount: 1000,
       customFee: 50,
@@ -83,10 +83,10 @@ describe("calculateTaxSequence", () => {
       grossInBase: 900,
       feeInBase: 45,
       taxableBase: 855,
-      spainTax: 51.3,
-      postSpainBase: 803.7,
+      spainTax: 35.91,
+      postSpainBase: 598.5,
       companyTax: 256.5,
-      netPayout: 547.2,
+      netPayout: 562.59,
     });
   });
 
@@ -165,11 +165,11 @@ describe("calculateProjectTaxes", () => {
     });
   });
 
-  it("returns FOP 30% fee and 6% tax from the taxable base", () => {
+  it("returns FOP 30% fee first, then 6% tax on the remainder", () => {
     expect(calculateProjectTaxes(1000, "fop_3")).toEqual({
-      taxes: 60,
+      taxes: 42,
       companyFee: 300,
-      net: 640,
+      net: 658,
       taxLabel: "ФОП 3 гр. (6%)",
     });
   });
@@ -357,10 +357,10 @@ describe("calculateFinancialBreakdown", () => {
       grossInBase: 900,
       feeInBase: 45,
       taxableBase: 855,
-      spainTax: 51.3,
-      postSpainBase: 803.7,
+      spainTax: 35.91,
+      postSpainBase: 598.5,
       companyTax: 256.5,
-      netPayout: 547.2,
+      netPayout: 562.59,
     });
     expect(ledger.grossInBase).toBe(modal.grossInBase);
     expect(ledger.feeInBase).toBe(modal.feeInBase);
@@ -384,6 +384,24 @@ describe("calculateFinancialBreakdown", () => {
     expect(ledger.spainTax).toBe(modal.spainTax);
     expect(ledger.companyTax).toBe(modal.companyTax);
     expect(ledger.netPayout).toBe(modal.netPayout);
+  });
+
+  it("matches the UAH cascading example to the kopeck", () => {
+    const result = calculateFinancialBreakdown({
+      gross: 13450.46,
+      platformFee: 0,
+      currency: "UAH",
+      exchangeRate: 1,
+      taxModel: "fop_3",
+    });
+
+    expect(result.companyTax).toBe(4035.14);
+    expect(result.postSpainBase).toBe(9415.32);
+    expect(result.spainTax).toBe(564.92);
+    expect(result.netPayout).toBe(8850.4);
+    expect(formatLedgerTaxTooltip("fop_3", result.spainTax, result.companyTax)).toBe(
+      "ФОП (5% + 1%): 564,92 грн | Фірма (30%): 4 035,14 грн",
+    );
   });
 
   it("keeps Spain 19% for pre-cutover rows without a stored model", () => {
