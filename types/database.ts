@@ -54,6 +54,7 @@ export type Database = {
           status: string;
           week_number: number;
           notes: string | null;
+          tax_model: string;
           created_at: string;
           updated_at: string;
         };
@@ -76,6 +77,7 @@ export type Database = {
           status: string;
           week_number: number;
           notes?: string | null;
+          tax_model?: string;
           created_at?: string;
           updated_at?: string;
         };
@@ -98,6 +100,7 @@ export type Database = {
           status?: string;
           week_number?: number;
           notes?: string | null;
+          tax_model?: string;
           created_at?: string;
           updated_at?: string;
         };

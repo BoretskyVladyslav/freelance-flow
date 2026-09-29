@@ -13,7 +13,12 @@ export const PAYMENT_STATUSES = ["Pending", "Paid", "In Progress"] as const;
 export type PaymentStatus = (typeof PAYMENT_STATUSES)[number];
 
 export const BASE_CURRENCY = "EUR" as const;
-export const BACKUP_SCHEMA_VERSION = 3;
+export const BACKUP_SCHEMA_VERSION = 4;
+
+export const TAX_MODELS = ["spain_19", "fop_3"] as const;
+export type TaxModel = (typeof TAX_MODELS)[number];
+export const DEFAULT_TAX_MODEL: TaxModel = "spain_19";
+export const ADMIN_FOP_EMAIL = "workspacetechdef@gmail.com";
 
 export type Transaction = {
   id: string;
@@ -35,6 +40,7 @@ export type Transaction = {
   notes?: string;
   employeeId?: string;
   createdBy?: string;
+  tax_model?: TaxModel;
 };
 
 export type Project = Transaction;
@@ -96,6 +102,30 @@ export function isPaymentStatus(value: unknown): value is PaymentStatus {
   );
 }
 
+export function isTaxModel(value: unknown): value is TaxModel {
+  return typeof value === "string" && (TAX_MODELS as readonly string[]).includes(value);
+}
+
+export function getTaxModel(
+  transaction: Pick<Transaction, "tax_model"> | TaxModel | null | undefined,
+): TaxModel {
+  if (typeof transaction === "string") {
+    return transaction === "fop_3" ? "fop_3" : "spain_19";
+  }
+  return transaction?.tax_model === "fop_3" ? "fop_3" : "spain_19";
+}
+
+export function defaultTaxModelForCreator(options: {
+  isAdmin: boolean;
+  email?: string | null;
+}): TaxModel {
+  const email = options.email?.trim().toLowerCase();
+  if (options.isAdmin || email === ADMIN_FOP_EMAIL) {
+    return "fop_3";
+  }
+  return DEFAULT_TAX_MODEL;
+}
+
 function isFiniteNumber(value: unknown): value is number {
   return typeof value === "number" && Number.isFinite(value);
 }
@@ -153,6 +183,7 @@ export function isTransaction(value: unknown): value is Transaction {
   if (row.notes !== undefined && typeof row.notes !== "string") return false;
   if (row.employeeId !== undefined && typeof row.employeeId !== "string") return false;
   if (row.createdBy !== undefined && typeof row.createdBy !== "string") return false;
+  if (row.tax_model !== undefined && !isTaxModel(row.tax_model)) return false;
   return true;
 }
 

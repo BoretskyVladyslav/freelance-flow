@@ -10,6 +10,7 @@ import {
   isCurrency,
   isPaymentStatus,
   isPlatform,
+  isTaxModel,
   type Transaction,
 } from "@/types/finance";
 import type { Database } from "@/types/database";
@@ -53,6 +54,7 @@ function rowToTransaction(row: ProjectRow): Transaction | null {
     notes: row.notes ?? undefined,
     employeeId: row.employee_id,
     createdBy: row.created_by ?? undefined,
+    tax_model: isTaxModel(row.tax_model) ? row.tax_model : "spain_19",
   };
 }
 
@@ -76,6 +78,7 @@ export function transactionToRow(transaction: Transaction, userId: string): Proj
     status: transaction.status,
     week_number: transaction.weekNumber,
     notes: transaction.notes ?? null,
+    tax_model: transaction.tax_model === "fop_3" ? "fop_3" : "spain_19",
   };
 }
 

@@ -1,6 +1,6 @@
 import type { UserRole } from "@/types/database";
 import type { ProfileStatus } from "@/types/team";
-import type { PaymentStatus, Platform } from "@/types/finance";
+import type { PaymentStatus, Platform, TaxModel } from "@/types/finance";
 
 export const PLATFORM_LABELS: Record<Platform, string> = {
   Freelancehunt: "Freelancehunt",
@@ -34,6 +34,11 @@ export const STATUS_FILTER_ITEMS = {
 export const ROLE_LABELS: Record<UserRole, string> = {
   admin: "Адмін",
   employee: "Працівник",
+};
+
+export const TAX_MODEL_LABELS: Record<TaxModel, string> = {
+  spain_19: "Іспанія (19%)",
+  fop_3: "ФОП 3 гр. (5% + 1%)",
 };
 
 export const STATUS_ACCOUNT_LABELS: Record<ProfileStatus, string> = {

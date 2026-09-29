@@ -2,7 +2,7 @@ import Decimal from "decimal.js";
 import { formatMonthFilterLabel, formatWeekFilterLabel } from "@/lib/format";
 import { convertToDisplay, moneyNumber } from "@/lib/tax-calculator";
 import type { TransactionView } from "@/lib/aggregates";
-import type { Currency, ExchangeRates, LedgerFilters } from "@/types/finance";
+import { getTaxModel, type Currency, type ExchangeRates, type LedgerFilters, type TaxModel } from "@/types/finance";
 
 const DIVIDER = "━━━━━━━━━━━━━━━━━━";
 
@@ -23,6 +23,17 @@ function toOriginal(amountEur: number, toEur: number): number {
   return moneyNumber(new Decimal(amountEur).div(toEur));
 }
 
+export function formatTelegramTaxLine(
+  taxModel: TaxModel | undefined,
+  taxAmount: string,
+  currency: string,
+): string {
+  if (getTaxModel(taxModel) === "fop_3") {
+    return `🏛 Податки ФОП (5% ЄП + 1% ВЗ): -${taxAmount} ${currency}`;
+  }
+  return `🏛 Податок Іспанії (19%): -${taxAmount} ${currency}`;
+}
+
 export function formatTransactionTelegram(row: TransactionView): string {
   const rate = row.exchangeRateAtCreation;
   const currency = row.currency;
@@ -37,7 +48,7 @@ export function formatTransactionTelegram(row: TransactionView): string {
     client ? `👤 Клієнт: ${client}` : "",
     DIVIDER,
     `💰 Валовий (Gross): ${gross} ${currency}`,
-    `🏛 Податок Іспанії (19%): -${spainTax} ${currency}`,
+    formatTelegramTaxLine(row.tax_model, spainTax, currency),
     `🏢 Комісія фірми (30%): -${companyTax} ${currency}`,
     DIVIDER,
     `✅ До виплати (Net): ${net} ${currency}`,

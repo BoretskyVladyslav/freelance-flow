@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { normalizeEurRates, uahPerUnit } from "@/lib/exchange-rates";
 import {
+  calculateProjectTaxes,
   calculateTaxSequence,
   calculateTransaction,
   convertFromEur,
@@ -60,6 +61,44 @@ describe("calculateTaxSequence", () => {
     expect(pln.feeInBase).toBe(4.6);
     expect(pln.taxableBase).toBe(225.4);
   });
+
+  it("applies FOP 6% instead of Spain 19% while keeping the same rounding sequence", () => {
+    const result = calculateTaxSequence({
+      grossAmount: 1000,
+      customFee: 50,
+      exchangeRate: 0.9,
+      taxModel: "fop_3",
+    });
+
+    expect(result).toEqual({
+      grossInBase: 900,
+      feeInBase: 45,
+      taxableBase: 855,
+      spainTax: 51.3,
+      postSpainBase: 803.7,
+      companyTax: 241.11,
+      netPayout: 562.59,
+    });
+  });
+
+  it("keeps Spain 19% figures when taxModel is omitted or spain_19", () => {
+    const omitted = calculateTaxSequence({
+      grossAmount: 200,
+      customFee: 0,
+      exchangeRate: 1,
+    });
+    const explicit = calculateTaxSequence({
+      grossAmount: 200,
+      customFee: 0,
+      exchangeRate: 1,
+      taxModel: "spain_19",
+    });
+
+    expect(omitted).toEqual(explicit);
+    expect(omitted.spainTax).toBe(38);
+    expect(omitted.companyTax).toBe(48.6);
+    expect(omitted.netPayout).toBe(113.4);
+  });
 });
 
 describe("calculateTransaction", () => {
@@ -89,6 +128,41 @@ describe("calculateTransaction", () => {
 
     expect(result.currencyGainLoss).toBe(0);
     expect(result.currentNetPayoutAtLiveRate).toBe(result.netPayout);
+  });
+
+  it("does not change historical Spain nets when tax_model is missing", () => {
+    const result = calculateTransaction(
+      {
+        grossAmount: 1000,
+        customFee: 50,
+        currency: "USD",
+        exchangeRateAtCreation: 0.9,
+      },
+      0.95,
+    );
+
+    expect(result.netPayout).toBe(484.78);
+    expect(result.spainTax).toBe(162.45);
+  });
+});
+
+describe("calculateProjectTaxes", () => {
+  it("returns Spain 19% then 30% company fee by default", () => {
+    expect(calculateProjectTaxes(1000)).toEqual({
+      taxes: 190,
+      companyFee: 243,
+      net: 567,
+      taxLabel: "Іспанія (19%)",
+    });
+  });
+
+  it("returns FOP 6% then 30% company fee", () => {
+    expect(calculateProjectTaxes(1000, "fop_3")).toEqual({
+      taxes: 60,
+      companyFee: 282,
+      net: 658,
+      taxLabel: "ФОП 3 гр. (6%)",
+    });
   });
 });
 

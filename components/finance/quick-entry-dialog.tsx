@@ -34,18 +34,24 @@ import {
   PLATFORM_LABELS,
   STATUS_DESCRIPTIONS,
   STATUS_LABELS,
+  TAX_MODEL_LABELS,
 } from "@/lib/labels";
 import { applyEndDateChange, applyStatusChange } from "@/lib/project-automation";
-import { calculateTransaction, convertToDisplay } from "@/lib/tax-calculator";
+import { calculateTransaction, convertToDisplay, taxModelLabel } from "@/lib/tax-calculator";
 import { isoWeekFromIsoDate, todayIsoDate, weekKeyFromIsoDate } from "@/lib/week";
 import {
   CURRENCIES,
   PAYMENT_STATUSES,
   PLATFORMS,
+  TAX_MODELS,
+  defaultTaxModelForCreator,
+  getTaxModel,
   isPaymentStatus,
+  isTaxModel,
   type Currency,
   type PaymentStatus,
   type Platform,
+  type TaxModel,
   type Transaction,
 } from "@/types/finance";
 
@@ -61,6 +67,7 @@ type FormState = {
   payoutDate: string;
   status: PaymentStatus;
   notes: string;
+  tax_model: TaxModel;
 };
 
 const EMPTY_FORM: FormState = {
@@ -75,11 +82,14 @@ const EMPTY_FORM: FormState = {
   payoutDate: "",
   status: "In Progress",
   notes: "",
+  tax_model: "fop_3",
 };
 
 const CURRENCY_ITEMS = Object.fromEntries(
   CURRENCIES.map((currency) => [currency, currency]),
 ) as Record<Currency, string>;
+
+const TAX_MODEL_ITEMS = { ...TAX_MODEL_LABELS };
 
 type QuickEntryDialogProps = {
   open: boolean;
@@ -92,7 +102,7 @@ export function QuickEntryDialog({
   onOpenChange,
   transaction,
 }: QuickEntryDialogProps) {
-  const { addTransaction, updateTransaction, rates } = useFinance();
+  const { addTransaction, updateTransaction, rates, isAdmin, currentUserEmail } = useFinance();
   const [form, setForm] = useState<FormState>(EMPTY_FORM);
   const editing = Boolean(transaction);
 
@@ -111,11 +121,16 @@ export function QuickEntryDialog({
         payoutDate: transaction.payoutDate?.slice(0, 10) ?? "",
         status: transaction.status,
         notes: transaction.notes ?? "",
+        tax_model: getTaxModel(transaction),
       });
       return;
     }
-    setForm({ ...EMPTY_FORM, startDate: todayIsoDate() });
-  }, [open, transaction]);
+    setForm({
+      ...EMPTY_FORM,
+      startDate: todayIsoDate(),
+      tax_model: defaultTaxModelForCreator({ isAdmin, email: currentUserEmail }),
+    });
+  }, [currentUserEmail, isAdmin, open, transaction]);
 
   const grossAmount = Number(form.grossAmount);
   const customFee = Number(form.customFee);
@@ -136,13 +151,14 @@ export function QuickEntryDialog({
           customFee,
           currency: form.currency,
           exchangeRateAtCreation: lockedRate,
+          tax_model: form.tax_model,
         },
         rates.toEur[form.currency],
       );
     } catch {
       return null;
     }
-  }, [customFee, form.currency, grossAmount, lockedRate, rates.toEur]);
+  }, [customFee, form.currency, form.tax_model, grossAmount, lockedRate, rates.toEur]);
   const previewRates = useMemo(
     () => ({
       ...rates,
@@ -235,6 +251,7 @@ export function QuickEntryDialog({
       payoutDate: form.payoutDate || undefined,
       status: form.status,
       notes: form.notes,
+      tax_model: form.tax_model,
       exchangeRateAtCreation: lockedRate,
     };
 
@@ -259,6 +276,7 @@ export function QuickEntryDialog({
     form.platform,
     form.startDate,
     form.status,
+    form.tax_model,
     form.title,
     grossAmount,
     customFee,
@@ -431,6 +449,33 @@ export function QuickEntryDialog({
                 onChange={(event) => setField("customFee", event.target.value)}
               />
             </div>
+            {isAdmin ? (
+            <div className="grid gap-1.5">
+              <div className="flex h-5 items-center">
+                <Label htmlFor="tax_model">Модель податку</Label>
+              </div>
+              <Select
+                value={form.tax_model}
+                items={TAX_MODEL_ITEMS}
+                onValueChange={(value) => value && isTaxModel(value) && setField("tax_model", value)}
+              >
+                <SelectTrigger id="tax_model" className="w-full">
+                  <SelectValue>
+                    {(value: TaxModel | null) =>
+                      value ? TAX_MODEL_LABELS[value] : TAX_MODEL_LABELS[form.tax_model]
+                    }
+                  </SelectValue>
+                </SelectTrigger>
+                <SelectContent alignItemWithTrigger={false}>
+                  {TAX_MODELS.map((model) => (
+                    <SelectItem key={model} value={model}>
+                      {TAX_MODEL_LABELS[model]}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            ) : null}
             <div className="grid gap-1.5">
               <div className="flex h-5 items-center">
                 <Label htmlFor="startDate">Дата початку</Label>
@@ -497,7 +542,9 @@ export function QuickEntryDialog({
                 </div>
               </div>
               <div>
-                <div className="text-muted-foreground">Іспанія 19% ({form.currency})</div>
+                <div className="text-muted-foreground">
+                  {taxModelLabel(form.tax_model)} ({form.currency})
+                </div>
                 <div className="tabular-nums">
                   {formatPreviewAmount(preview.spainTax)}
                 </div>

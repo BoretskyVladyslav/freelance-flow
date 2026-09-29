@@ -45,6 +45,7 @@ type FinanceContextValue = {
   role: UserRole;
   isAdmin: boolean;
   currentUserId: string;
+  currentUserEmail: string;
   teamScope: TeamScope;
   setTeamScope: (scope: TeamScope, label?: string, email?: string) => void;
   employeeView: EmployeeView | null;
@@ -91,6 +92,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
   const [persistEnabled, setPersistEnabled] = useState(false);
   const [role, setRole] = useState<UserRole>("employee");
   const [currentUserId, setCurrentUserId] = useState("");
+  const [currentUserEmail, setCurrentUserEmail] = useState("");
   const [teamScope, setTeamScopeState] = useState<TeamScope>("all");
   const [employeeView, setEmployeeView] = useState<EmployeeView | null>(null);
   const [snapshot, setSnapshot] = useState<FinanceSnapshot>({
@@ -133,6 +135,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
         if (!user) {
           setRole("employee");
           setCurrentUserId("");
+          setCurrentUserEmail("");
           return;
         }
 
@@ -156,6 +159,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
         }
 
         setCurrentUserId(user.id);
+        setCurrentUserEmail(user.email ?? "");
         const resolvedRole: UserRole =
           (profile.data?.role as UserRole) ||
           (user.user_metadata?.role as UserRole) ||
@@ -170,6 +174,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
         if (!cancelled) {
           setRole("employee");
           setCurrentUserId("");
+          setCurrentUserEmail("");
         }
       }
     })();
@@ -353,6 +358,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
       role,
       isAdmin,
       currentUserId,
+      currentUserEmail,
       teamScope,
       setTeamScope,
       employeeView,
@@ -383,6 +389,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     [
       addTransaction,
       clearEmployeeView,
+      currentUserEmail,
       currentUserId,
       deleteTransaction,
       displayTotals,

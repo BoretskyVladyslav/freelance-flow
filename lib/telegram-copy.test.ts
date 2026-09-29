@@ -82,6 +82,16 @@ describe("formatTransactionTelegram", () => {
     expect(text).toContain("✅ До виплати (Net): 113,40 EUR");
     expect(text).not.toContain("Клієнт");
   });
+
+  it("formats FOP tax for a fop_3 project", () => {
+    const [view] = withBreakdowns([{ ...usd, tax_model: "fop_3" }], LAST_RESORT_RATES);
+    const text = formatTransactionTelegram(view);
+
+    expect(text).toContain("🏛 Податки ФОП (5% ЄП + 1% ВЗ): -57,00 USD");
+    expect(text).toContain("🏢 Комісія фірми (30%): -267,90 USD");
+    expect(text).toContain("✅ До виплати (Net): 625,10 USD");
+    expect(text).not.toContain("Податок Іспанії");
+  });
 });
 
 describe("describeTelegramPeriod", () => {

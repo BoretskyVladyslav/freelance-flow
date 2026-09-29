@@ -87,7 +87,7 @@ export function Dashboard() {
           </h1>
           <p className="hidden text-sm text-muted-foreground print:hidden md:block">
             {isAdmin
-              ? "Базова валюта: EUR · Податок в Іспанії 19%, податок компанії 30% · Курс валют онлайн із фіксацією на дату створення"
+              ? "Базова валюта: EUR · ФОП 3 гр. (5%+1%) / Іспанія 19% · комісія фірми 30% · Курс фіксується на дату створення"
               : "Ваші проєкти, чисті виплати та персональні показники · Базова валюта EUR"}
           </p>
           <p className="hidden text-sm text-muted-foreground print:block">

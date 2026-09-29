@@ -46,6 +46,7 @@ import { weekKeyFromIsoDate } from "@/lib/week";
 import type { TransactionView } from "@/lib/aggregates";
 import {
   PAYMENT_STATUSES,
+  getTaxModel,
   getTransactionStartDate,
   type PaymentStatus,
   type Platform,
@@ -177,7 +178,9 @@ const TaxDetails = memo(function TaxDetails({ row }: { row: TransactionView }) {
     convertToDisplay(row.breakdown.companyTax, displayCurrency, rates),
     displayCurrency,
   );
-  const summary = `Іспанія (19%): ${spainTax} | Фірма (30%): ${companyTax}`;
+  const taxLabel =
+    getTaxModel(row.tax_model) === "fop_3" ? "ФОП (5% + 1%)" : "Іспанія (19%)";
+  const summary = `${taxLabel}: ${spainTax} | Фірма (30%): ${companyTax}`;
 
   return (
     <Tooltip>

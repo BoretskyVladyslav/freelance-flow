@@ -4,13 +4,18 @@ import {
   type Currency,
   type ExchangeRates,
   type TaxBreakdown,
+  type TaxModel,
   type Transaction,
 } from "@/types/finance";
 
 Decimal.set({ rounding: Decimal.ROUND_HALF_UP, precision: 20 });
 
 export const SPAIN_TAX_RATE = new Decimal("0.19");
+export const FOP_TAX_RATE = new Decimal("0.06"); // 5% ЄП + 1% ВЗ
 export const COMPANY_TAX_RATE = new Decimal("0.30");
+
+export const SPAIN_TAX_LABEL = "Іспанія (19%)";
+export const FOP_TAX_LABEL = "ФОП 3 гр. (6%)";
 
 export function roundMoney(value: Decimal.Value): Decimal {
   return new Decimal(value).toDecimalPlaces(2, Decimal.ROUND_HALF_UP);
@@ -20,10 +25,19 @@ export function moneyNumber(value: Decimal.Value): number {
   return roundMoney(value).toNumber();
 }
 
+export function resolveIncomeTaxRate(taxModel?: TaxModel | null): Decimal {
+  return taxModel === "fop_3" ? FOP_TAX_RATE : SPAIN_TAX_RATE;
+}
+
+export function taxModelLabel(taxModel?: TaxModel | null): string {
+  return taxModel === "fop_3" ? FOP_TAX_LABEL : SPAIN_TAX_LABEL;
+}
+
 export type TaxSequenceInput = {
   grossAmount: number;
   customFee: number;
   exchangeRate: number;
+  taxModel?: TaxModel;
 };
 
 export type HistoricalTaxResult = {
@@ -40,6 +54,7 @@ export function calculateTaxSequence(input: TaxSequenceInput): HistoricalTaxResu
   const grossAmount = new Decimal(input.grossAmount);
   const customFee = new Decimal(input.customFee);
   const exchangeRate = new Decimal(input.exchangeRate);
+  const taxRate = resolveIncomeTaxRate(input.taxModel);
 
   if (!grossAmount.isFinite() || grossAmount.lt(0)) {
     throw new Error("grossAmount must be a finite number >= 0.");
@@ -54,7 +69,7 @@ export function calculateTaxSequence(input: TaxSequenceInput): HistoricalTaxResu
   const grossInBase = roundMoney(grossAmount.times(exchangeRate));
   const feeInBase = roundMoney(customFee.times(exchangeRate));
   const taxableBase = roundMoney(grossInBase.minus(feeInBase));
-  const spainTax = roundMoney(taxableBase.times(SPAIN_TAX_RATE));
+  const spainTax = roundMoney(taxableBase.times(taxRate));
   const postSpainBase = roundMoney(taxableBase.minus(spainTax));
   const companyTax = roundMoney(postSpainBase.times(COMPANY_TAX_RATE));
   const netPayout = roundMoney(postSpainBase.minus(companyTax));
@@ -70,17 +85,37 @@ export function calculateTaxSequence(input: TaxSequenceInput): HistoricalTaxResu
   };
 }
 
+export function calculateProjectTaxes(
+  gross: number,
+  taxModel: TaxModel = "spain_19",
+): { taxes: number; companyFee: number; net: number; taxLabel: string } {
+  const result = calculateTaxSequence({
+    grossAmount: gross,
+    customFee: 0,
+    exchangeRate: 1,
+    taxModel,
+  });
+  return {
+    taxes: result.spainTax,
+    companyFee: result.companyTax,
+    net: result.netPayout,
+    taxLabel: taxModelLabel(taxModel),
+  };
+}
+
 export function calculateTransaction(
   transaction: Pick<
     Transaction,
-    "grossAmount" | "customFee" | "exchangeRateAtCreation" | "currency"
+    "grossAmount" | "customFee" | "exchangeRateAtCreation" | "currency" | "tax_model"
   >,
   liveToEur?: number,
 ): TaxBreakdown {
+  const taxModel = transaction.tax_model === "fop_3" ? "fop_3" : "spain_19";
   const historical = calculateTaxSequence({
     grossAmount: transaction.grossAmount,
     customFee: transaction.customFee,
     exchangeRate: transaction.exchangeRateAtCreation,
+    taxModel,
   });
 
   const liveRate =
@@ -92,6 +127,7 @@ export function calculateTransaction(
     grossAmount: transaction.grossAmount,
     customFee: transaction.customFee,
     exchangeRate: liveRate,
+    taxModel,
   });
 
   const currencyGainLoss = moneyNumber(

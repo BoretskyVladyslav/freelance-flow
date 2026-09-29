@@ -117,7 +117,7 @@ export async function downloadPdfReport(input: PdfReportInput): Promise<string> 
       color: NAVY,
     },
     {
-      label: "19% Spain Tax",
+      label: "Tax (FOP / Reserve)",
       value: formatMoney(input.totals.spainTax, input.displayCurrency),
       color: ROSE,
     },
@@ -151,7 +151,7 @@ export async function downloadPdfReport(input: PdfReportInput): Promise<string> 
   const body = buildPdfTableRows(input.views, input.displayCurrency, input.rates);
   autoTable(doc, {
     startY: 72,
-    head: [["Date", "Project", "Platform", "Gross (orig.)", "Spain 19%", "Company 30%", "Net", "Status"]],
+    head: [["Date", "Project", "Platform", "Gross (orig.)", "Tax", "Company 30%", "Net", "Status"]],
     body,
     foot: [
       [

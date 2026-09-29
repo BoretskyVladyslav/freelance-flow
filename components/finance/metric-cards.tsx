@@ -42,11 +42,11 @@ export function MetricCards() {
     },
     {
       key: "spain",
-      title: "Податок в Іспанії (19%)",
+      title: "Податки (ФОП / Резерв)",
       value: formatMoney(displayTotals.spainTax, displayCurrency),
       description: isAdmin && teamScope === "all"
-        ? "Агрегація по компанії. Нараховується на базу після вирахування комісій."
-        : "Нараховується на базу після вирахування комісій.",
+        ? "Агрегація по компанії. Кожен проєкт рахується за своєю моделлю (ФОП 6% або Іспанія 19%)."
+        : "Кожен проєкт рахується за своєю моделлю (ФОП 6% або Іспанія 19%).",
       icon: Landmark,
     },
     {
@@ -54,8 +54,8 @@ export function MetricCards() {
       title: "Податок фірми (30%)",
       value: formatMoney(displayTotals.companyTax, displayCurrency),
       description: isAdmin && teamScope === "all"
-        ? "Агрегація по компанії. Нараховується на залишок після сплати іспанського податку."
-        : "Нараховується на залишок після сплати іспанського податку.",
+        ? "Агрегація по компанії. Нараховується на залишок після сплати податків."
+        : "Нараховується на залишок після сплати податків.",
       icon: Building2,
       valueClass: "text-rose-600 dark:text-rose-400",
     },

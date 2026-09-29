@@ -59,9 +59,30 @@ create table if not exists public.projects (
     check (status in ('Pending', 'Paid', 'In Progress')),
   week_number integer not null check (week_number between 1 and 53),
   notes text,
+  tax_model text not null default 'spain_19'
+    check (tax_model in ('spain_19', 'fop_3')),
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
+
+alter table public.projects
+  add column if not exists tax_model text default 'spain_19';
+
+update public.projects
+set tax_model = 'spain_19'
+where tax_model is null;
+
+do $$
+begin
+  if not exists (
+    select 1 from pg_constraint where conname = 'projects_tax_model_check'
+  ) then
+    alter table public.projects
+      add constraint projects_tax_model_check
+      check (tax_model in ('spain_19', 'fop_3'));
+  end if;
+end
+$$;
 
 create index if not exists projects_employee_id_idx on public.projects (employee_id);
 create index if not exists projects_status_idx on public.projects (status);

@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
   BACKUP_SCHEMA_VERSION,
+  defaultTaxModelForCreator,
+  getTaxModel,
   getTransactionStartDate,
   parseBackup,
   type BackupEnvelope,
@@ -156,5 +158,52 @@ describe("parseBackup", () => {
         lastKnownRates: { base: "USD", fetchedAt: "now", toEur: {} },
       }),
     ).toThrow(/lastKnownRates/);
+  });
+
+  it("accepts optional tax_model without changing legacy records", () => {
+    const parsedLegacy = parseBackup({
+      version: 1,
+      exportedAt: "2026-08-29T10:00:00.000Z",
+      transactions: [validTransaction],
+    });
+    expect(parsedLegacy.transactions[0]).not.toHaveProperty("tax_model");
+    expect(getTaxModel(parsedLegacy.transactions[0])).toBe("spain_19");
+
+    const parsed = parseBackup({
+      version: BACKUP_SCHEMA_VERSION,
+      exportedAt: "2026-08-29T10:00:00.000Z",
+      transactions: [{ ...validTransaction, tax_model: "fop_3" }],
+    });
+    expect(parsed.transactions[0].tax_model).toBe("fop_3");
+  });
+
+  it("rejects an invalid tax_model", () => {
+    expect(() =>
+      parseBackup({
+        version: 1,
+        exportedAt: "2026-08-29T10:00:00.000Z",
+        transactions: [{ ...validTransaction, tax_model: "vat_20" }],
+      }),
+    ).toThrow(/index 0/);
+  });
+});
+
+describe("defaultTaxModelForCreator", () => {
+  it("defaults new admin projects to FOP 3", () => {
+    expect(defaultTaxModelForCreator({ isAdmin: true, email: "other@example.com" })).toBe(
+      "fop_3",
+    );
+    expect(
+      defaultTaxModelForCreator({
+        isAdmin: false,
+        email: "workspacetechdef@gmail.com",
+      }),
+    ).toBe("fop_3");
+  });
+
+  it("keeps Spain 19% for non-admin creators", () => {
+    expect(defaultTaxModelForCreator({ isAdmin: false, email: "dev@example.com" })).toBe(
+      "spain_19",
+    );
   });
 });
