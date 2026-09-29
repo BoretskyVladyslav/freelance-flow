@@ -84,6 +84,15 @@ begin
 end
 $$;
 
+alter table public.projects
+  add column if not exists gross_uah numeric(14, 2);
+
+alter table public.projects
+  add column if not exists net_uah numeric(14, 2);
+
+alter table public.projects
+  add column if not exists uah_rate_at_creation numeric(18, 8);
+
 create index if not exists projects_employee_id_idx on public.projects (employee_id);
 create index if not exists projects_status_idx on public.projects (status);
 create index if not exists projects_date_idx on public.projects (date);

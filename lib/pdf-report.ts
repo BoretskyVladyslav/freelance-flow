@@ -2,8 +2,12 @@ import {
   PLATFORM_LABELS,
   STATUS_LABELS,
 } from "@/lib/labels";
-import { formatDate, formatMoney, formatMonthFilterLabel, formatWeekFilterLabel } from "@/lib/format";
-import { convertToDisplay } from "@/lib/tax-calculator";
+import { formatDate, formatMoney, formatMonthFilterLabel, formatMonthlyEsvNote, formatWeekFilterLabel } from "@/lib/format";
+import {
+  convertToDisplay,
+  netAfterMonthlyEsv,
+  shouldApplyMonthlyEsv,
+} from "@/lib/tax-calculator";
 import {
   getTransactionStartDate,
   type Currency,
@@ -148,9 +152,31 @@ export async function downloadPdfReport(input: PdfReportInput): Promise<string> 
     doc.text(kpi.value, x + 3, 62);
   });
 
+  const applyEsv = shouldApplyMonthlyEsv(input.filters);
+  let tableStartY = 72;
+  if (applyEsv) {
+    const netAfterEsv = netAfterMonthlyEsv(
+      input.totals.netPayout,
+      input.displayCurrency,
+      input.rates,
+    );
+    doc.setFont("Roboto", "normal");
+    doc.setFontSize(9);
+    doc.setTextColor(...ROSE);
+    doc.text(formatMonthlyEsvNote(), 14, 70);
+    doc.setTextColor(...EMERALD);
+    doc.text(
+      `Чистий залишок після ЄСВ: ${formatMoney(netAfterEsv, input.displayCurrency)}`,
+      14,
+      75,
+    );
+    doc.setTextColor(30, 41, 59);
+    tableStartY = 80;
+  }
+
   const body = buildPdfTableRows(input.views, input.displayCurrency, input.rates);
   autoTable(doc, {
-    startY: 72,
+    startY: tableStartY,
     head: [["Date", "Project", "Platform", "Gross (orig.)", "Tax", "Company 30%", "Net", "Status"]],
     body,
     foot: [

@@ -1,8 +1,10 @@
 import Decimal from "decimal.js";
+import { LAST_RESORT_RATES, uahPerUnit } from "@/lib/exchange-rates";
 import {
   BASE_CURRENCY,
   type Currency,
   type ExchangeRates,
+  type LedgerFilters,
   type TaxBreakdown,
   type TaxModel,
   type Transaction,
@@ -16,6 +18,7 @@ export const COMPANY_TAX_RATE = new Decimal("0.30");
 
 export const SPAIN_TAX_LABEL = "Іспанія (19%)";
 export const FOP_TAX_LABEL = "ФОП 3 гр. (6%)";
+export const MONTHLY_ESV_UAH = 1760;
 
 export function roundMoney(value: Decimal.Value): Decimal {
   return new Decimal(value).toDecimalPlaces(2, Decimal.ROUND_HALF_UP);
@@ -69,6 +72,24 @@ export function calculateTaxSequence(input: TaxSequenceInput): HistoricalTaxResu
   const grossInBase = roundMoney(grossAmount.times(exchangeRate));
   const feeInBase = roundMoney(customFee.times(exchangeRate));
   const taxableBase = roundMoney(grossInBase.minus(feeInBase));
+
+  if (input.taxModel === "fop_3") {
+    const companyTax = roundMoney(taxableBase.times(COMPANY_TAX_RATE));
+    const spainTax = roundMoney(taxableBase.times(FOP_TAX_RATE));
+    const afterCompany = roundMoney(taxableBase.minus(companyTax));
+    const netPayout = roundMoney(afterCompany.minus(spainTax));
+    const postSpainBase = roundMoney(taxableBase.minus(spainTax));
+    return {
+      grossInBase: grossInBase.toNumber(),
+      feeInBase: feeInBase.toNumber(),
+      taxableBase: taxableBase.toNumber(),
+      spainTax: spainTax.toNumber(),
+      postSpainBase: postSpainBase.toNumber(),
+      companyTax: companyTax.toNumber(),
+      netPayout: netPayout.toNumber(),
+    };
+  }
+
   const spainTax = roundMoney(taxableBase.times(taxRate));
   const postSpainBase = roundMoney(taxableBase.minus(spainTax));
   const companyTax = roundMoney(postSpainBase.times(COMPANY_TAX_RATE));
@@ -184,4 +205,88 @@ export function displayCurrencyGainLoss(
 ): number {
   if (originalCurrency === displayCurrency) return 0;
   return convertToDisplay(gainEur, displayCurrency, rates);
+}
+
+function ratesWithLockedToEur(
+  currency: Currency,
+  lockedToEur: number,
+  rates: ExchangeRates | null | undefined,
+): ExchangeRates {
+  const source = rates ?? LAST_RESORT_RATES;
+  return {
+    ...source,
+    toEur: { ...source.toEur, [currency]: lockedToEur },
+  };
+}
+
+export function convertOriginalToUah(
+  amountOriginal: number,
+  currency: Currency,
+  rates: ExchangeRates | null | undefined,
+  lockedUahPerUnit?: number,
+): number {
+  if (currency === "UAH") return moneyNumber(amountOriginal);
+  const rate =
+    lockedUahPerUnit && Number.isFinite(lockedUahPerUnit) && lockedUahPerUnit > 0
+      ? lockedUahPerUnit
+      : uahPerUnit(currency, rates);
+  return moneyNumber(new Decimal(amountOriginal).times(rate));
+}
+
+export function resolveUahSnapshot(input: {
+  grossAmount: number;
+  currency: Currency;
+  netPayoutEur: number;
+  exchangeRateAtCreation: number;
+  rates: ExchangeRates | null | undefined;
+  uahRateAtCreation?: number;
+}): { uahRateAtCreation: number; gross_uah: number; net_uah: number } {
+  const lockedRates = ratesWithLockedToEur(
+    input.currency,
+    input.exchangeRateAtCreation,
+    input.rates,
+  );
+  const uahRateAtCreation =
+    input.uahRateAtCreation &&
+    Number.isFinite(input.uahRateAtCreation) &&
+    input.uahRateAtCreation > 0
+      ? new Decimal(input.uahRateAtCreation).toDecimalPlaces(8, Decimal.ROUND_HALF_UP).toNumber()
+      : new Decimal(uahPerUnit(input.currency, lockedRates))
+          .toDecimalPlaces(8, Decimal.ROUND_HALF_UP)
+          .toNumber();
+  const netOriginal = convertToDisplay(input.netPayoutEur, input.currency, lockedRates);
+  return {
+    uahRateAtCreation,
+    gross_uah: convertOriginalToUah(
+      input.grossAmount,
+      input.currency,
+      lockedRates,
+      uahRateAtCreation,
+    ),
+    net_uah: convertOriginalToUah(netOriginal, input.currency, lockedRates, uahRateAtCreation),
+  };
+}
+
+export function shouldApplyMonthlyEsv(filters: Pick<LedgerFilters, "month">): boolean {
+  return filters.month !== "all";
+}
+
+export function monthlyEsvDisplayAmount(
+  displayCurrency: Currency,
+  rates: ExchangeRates | null | undefined,
+): number {
+  if (displayCurrency === "UAH") return moneyNumber(MONTHLY_ESV_UAH);
+  const source = rates ?? LAST_RESORT_RATES;
+  const esvEur = moneyNumber(new Decimal(MONTHLY_ESV_UAH).times(getToEurRate("UAH", source)));
+  return convertToDisplay(esvEur, displayCurrency, source);
+}
+
+export function netAfterMonthlyEsv(
+  netDisplay: number,
+  displayCurrency: Currency,
+  rates: ExchangeRates | null | undefined,
+): number {
+  return moneyNumber(
+    new Decimal(netDisplay).minus(monthlyEsvDisplayAmount(displayCurrency, rates)),
+  );
 }

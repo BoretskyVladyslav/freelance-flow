@@ -55,6 +55,9 @@ export type Database = {
           week_number: number;
           notes: string | null;
           tax_model: string;
+          gross_uah: number | null;
+          net_uah: number | null;
+          uah_rate_at_creation: number | null;
           created_at: string;
           updated_at: string;
         };
@@ -78,6 +81,9 @@ export type Database = {
           week_number: number;
           notes?: string | null;
           tax_model?: string;
+          gross_uah?: number | null;
+          net_uah?: number | null;
+          uah_rate_at_creation?: number | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -101,6 +107,9 @@ export type Database = {
           week_number?: number;
           notes?: string | null;
           tax_model?: string;
+          gross_uah?: number | null;
+          net_uah?: number | null;
+          uah_rate_at_creation?: number | null;
           created_at?: string;
           updated_at?: string;
         };

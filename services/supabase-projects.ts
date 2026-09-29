@@ -27,7 +27,12 @@ export function ensureProjectUuid(id: string): string {
 
 type ProjectRow = Database["public"]["Tables"]["projects"]["Row"];
 type ProjectInsert = Database["public"]["Tables"]["projects"]["Insert"];
-type ProjectRowLike = Omit<ProjectRow, "tax_model"> & { tax_model?: string | null };
+type ProjectRowLike = Omit<ProjectRow, "tax_model" | "gross_uah" | "net_uah" | "uah_rate_at_creation"> & {
+  tax_model?: string | null;
+  gross_uah?: number | null;
+  net_uah?: number | null;
+  uah_rate_at_creation?: number | null;
+};
 type ProjectWriteResult = { error: { code?: string | null; message?: string | null } | null };
 
 function toIsoDate(value: string | null | undefined): string | undefined {
@@ -58,7 +63,13 @@ export function isTaxModelSchemaCacheError(
 
 export function stripTaxModelFromRows(rows: ProjectInsert[]): Array<Omit<ProjectInsert, "tax_model">> {
   return rows.map((row) => {
-    const { tax_model: _taxModel, ...rest } = row;
+    const {
+      tax_model: _taxModel,
+      gross_uah: _grossUah,
+      net_uah: _netUah,
+      uah_rate_at_creation: _uahRate,
+      ...rest
+    } = row;
     return rest;
   });
 }
@@ -104,6 +115,18 @@ function rowToTransaction(row: ProjectRowLike): Transaction | null {
     employeeId: row.employee_id,
     createdBy: row.created_by ?? undefined,
     tax_model: resolveRowTaxModel(row.tax_model ?? "spain_19"),
+    uahRateAtCreation:
+      typeof row.uah_rate_at_creation === "number" && row.uah_rate_at_creation > 0
+        ? Number(row.uah_rate_at_creation)
+        : undefined,
+    gross_uah:
+      typeof row.gross_uah === "number" && Number.isFinite(row.gross_uah) && row.gross_uah >= 0
+        ? Number(row.gross_uah)
+        : undefined,
+    net_uah:
+      typeof row.net_uah === "number" && Number.isFinite(row.net_uah) && row.net_uah >= 0
+        ? Number(row.net_uah)
+        : undefined,
   };
 }
 
@@ -128,6 +151,9 @@ export function transactionToRow(transaction: Transaction, userId: string): Proj
     week_number: transaction.weekNumber,
     notes: transaction.notes ?? null,
     tax_model: resolveRowTaxModel(transaction.tax_model),
+    uah_rate_at_creation: transaction.uahRateAtCreation ?? null,
+    gross_uah: transaction.gross_uah ?? null,
+    net_uah: transaction.net_uah ?? null,
   };
 }
 

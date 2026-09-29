@@ -10,7 +10,11 @@ import {
 } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useFinance } from "@/components/finance/finance-provider";
-import { formatMoney } from "@/lib/format";
+import { formatMoney, formatMonthlyEsvNote } from "@/lib/format";
+import {
+  netAfterMonthlyEsv,
+  shouldApplyMonthlyEsv,
+} from "@/lib/tax-calculator";
 import { cn } from "@/lib/utils";
 
 export function MetricCards() {
@@ -20,7 +24,13 @@ export function MetricCards() {
     hydrated,
     isAdmin,
     teamScope,
+    filters,
+    rates,
   } = useFinance();
+  const showEsv = shouldApplyMonthlyEsv(filters);
+  const netAfterEsv = showEsv
+    ? netAfterMonthlyEsv(displayTotals.netPayout, displayCurrency, rates)
+    : null;
 
   const cards = useMemo<
     Array<{
@@ -54,8 +64,8 @@ export function MetricCards() {
       title: "Податок фірми (30%)",
       value: formatMoney(displayTotals.companyTax, displayCurrency),
       description: isAdmin && teamScope === "all"
-        ? "Агрегація по компанії. Нараховується на залишок після сплати податків."
-        : "Нараховується на залишок після сплати податків.",
+        ? "Агрегація по компанії. ФОП: 30% від бази. Іспанія: 30% після податку."
+        : "ФОП: 30% від бази. Іспанія: 30% після податку.",
       icon: Building2,
       valueClass: "text-rose-600 dark:text-rose-400",
     },
@@ -116,6 +126,20 @@ export function MetricCards() {
           </CardContent>
         </Card>
       ))}
+      {showEsv ? (
+        <Card className="col-span-2 flex h-full min-w-0 flex-col justify-between [--card-spacing:--spacing(3)] md:col-span-4 md:[--card-spacing:--spacing(4)]">
+          <CardHeader className="gap-2">
+            <CardDescription className="text-xs leading-4 md:text-sm md:leading-5">
+              {formatMonthlyEsvNote()}
+            </CardDescription>
+            <CardTitle className="text-xl font-bold leading-snug tabular-nums text-emerald-600 sm:text-2xl dark:text-emerald-400">
+              {hydrated && netAfterEsv !== null
+                ? `Чистий залишок після ЄСВ: ${formatMoney(netAfterEsv, displayCurrency)}`
+                : "—"}
+            </CardTitle>
+          </CardHeader>
+        </Card>
+      ) : null}
     </section>
   );
 }

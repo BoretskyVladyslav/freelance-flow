@@ -83,14 +83,18 @@ describe("formatTransactionTelegram", () => {
     expect(text).not.toContain("Клієнт");
   });
 
-  it("formats FOP tax for a fop_3 project", () => {
+  it("formats FOP tax for a fop_3 project with fee taken from the taxable base", () => {
     const [view] = withBreakdowns([{ ...usd, tax_model: "fop_3" }], LAST_RESORT_RATES);
     const text = formatTransactionTelegram(view);
 
+    expect(text).toContain("🏢 Комісія фірми (30%): -285,00 USD");
     expect(text).toContain("🏛 Податки ФОП (5% ЄП + 1% ВЗ): -57,00 USD");
-    expect(text).toContain("🏢 Комісія фірми (30%): -267,90 USD");
-    expect(text).toContain("✅ До виплати (Net): 625,10 USD");
+    expect(text).toContain("✅ До виплати (Net): 608,00 USD");
     expect(text).not.toContain("Податок Іспанії");
+    const companyIndex = text.indexOf("Комісія фірми");
+    const taxIndex = text.indexOf("Податки ФОП");
+    expect(companyIndex).toBeGreaterThan(-1);
+    expect(taxIndex).toBeGreaterThan(companyIndex);
   });
 });
 
@@ -138,5 +142,20 @@ describe("formatEmployeePeriodTelegram", () => {
     expect(text).toContain("2. 📋 CRM");
     expect(text).not.toContain("Draft");
     expect(text).toMatch(/✅ Разом до виплати \(Net\): [\d\s,]+ EUR/);
+    expect(text).not.toContain("Резерв ЄСВ");
+  });
+
+  it("adds the monthly ESV reserve when a month is selected", () => {
+    const views = withBreakdowns([usd, eur], LAST_RESORT_RATES);
+    const text = formatEmployeePeriodTelegram({
+      employeeLabel: "Іван Петренко",
+      filters: { ...DEFAULT_FILTERS, month: "2026-08" },
+      views,
+      displayCurrency: "UAH",
+      rates: LAST_RESORT_RATES,
+    });
+
+    expect(text).toContain("Резерв ЄСВ за місяць: 1 760,00 грн (фіксовано 22% від МЗП)");
+    expect(text).toContain("Чистий залишок після ЄСВ");
   });
 });

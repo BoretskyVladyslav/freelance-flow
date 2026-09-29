@@ -1,6 +1,15 @@
 import Decimal from "decimal.js";
-import { formatMonthFilterLabel, formatWeekFilterLabel } from "@/lib/format";
-import { convertToDisplay, moneyNumber } from "@/lib/tax-calculator";
+import {
+  formatMonthFilterLabel,
+  formatMonthlyEsvNote,
+  formatWeekFilterLabel,
+} from "@/lib/format";
+import {
+  convertToDisplay,
+  moneyNumber,
+  netAfterMonthlyEsv,
+  shouldApplyMonthlyEsv,
+} from "@/lib/tax-calculator";
 import type { TransactionView } from "@/lib/aggregates";
 import { getTaxModel, type Currency, type ExchangeRates, type LedgerFilters, type TaxModel } from "@/types/finance";
 
@@ -48,8 +57,12 @@ export function formatTransactionTelegram(row: TransactionView): string {
     client ? `👤 Клієнт: ${client}` : "",
     DIVIDER,
     `💰 Валовий (Gross): ${gross} ${currency}`,
-    formatTelegramTaxLine(row.tax_model, spainTax, currency),
-    `🏢 Комісія фірми (30%): -${companyTax} ${currency}`,
+    getTaxModel(row.tax_model) === "fop_3"
+      ? `🏢 Комісія фірми (30%): -${companyTax} ${currency}`
+      : formatTelegramTaxLine(row.tax_model, spainTax, currency),
+    getTaxModel(row.tax_model) === "fop_3"
+      ? formatTelegramTaxLine(row.tax_model, spainTax, currency)
+      : `🏢 Комісія фірми (30%): -${companyTax} ${currency}`,
     DIVIDER,
     `✅ До виплати (Net): ${net} ${currency}`,
   ]
@@ -100,6 +113,10 @@ export function formatEmployeePeriodTelegram(input: {
     projects.reduce((acc, row) => acc.plus(row.breakdown.netPayout), new Decimal(0)),
   );
   const totalNet = convertToDisplay(totalNetEur, input.displayCurrency, input.rates);
+  const applyEsv = shouldApplyMonthlyEsv(input.filters);
+  const netAfterEsv = applyEsv
+    ? netAfterMonthlyEsv(totalNet, input.displayCurrency, input.rates)
+    : null;
 
   return [
     `📋 Підсумок: ${input.employeeLabel}`,
@@ -110,6 +127,10 @@ export function formatEmployeePeriodTelegram(input: {
     items.length > 0 ? items.join("\n") : "Немає проєктів за вибраний період.",
     DIVIDER,
     `✅ Разом до виплати (Net): ${formatTelegramNumber(totalNet)} ${input.displayCurrency}`,
+    applyEsv ? formatMonthlyEsvNote() : "",
+    netAfterEsv !== null
+      ? `💵 Чистий залишок після ЄСВ: ${formatTelegramNumber(netAfterEsv)} ${input.displayCurrency}`
+      : "",
   ]
     .filter((line) => line !== "")
     .join("\n");

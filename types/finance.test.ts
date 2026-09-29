@@ -186,6 +186,30 @@ describe("parseBackup", () => {
       }),
     ).toThrow(/index 0/);
   });
+
+  it("accepts optional locked UAH amounts without changing legacy records", () => {
+    const parsedLegacy = parseBackup({
+      version: 1,
+      exportedAt: "2026-08-29T10:00:00.000Z",
+      transactions: [validTransaction],
+    });
+    expect(parsedLegacy.transactions[0]).not.toHaveProperty("gross_uah");
+
+    const parsed = parseBackup({
+      version: BACKUP_SCHEMA_VERSION,
+      exportedAt: "2026-08-29T10:00:00.000Z",
+      transactions: [
+        {
+          ...validTransaction,
+          uahRateAtCreation: 41.81818182,
+          gross_uah: 41818.18,
+          net_uah: 25000,
+        },
+      ],
+    });
+    expect(parsed.transactions[0].gross_uah).toBe(41818.18);
+    expect(parsed.transactions[0].net_uah).toBe(25000);
+  });
 });
 
 describe("defaultTaxModelForCreator", () => {

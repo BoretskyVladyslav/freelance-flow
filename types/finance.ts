@@ -13,7 +13,7 @@ export const PAYMENT_STATUSES = ["Pending", "Paid", "In Progress"] as const;
 export type PaymentStatus = (typeof PAYMENT_STATUSES)[number];
 
 export const BASE_CURRENCY = "EUR" as const;
-export const BACKUP_SCHEMA_VERSION = 4;
+export const BACKUP_SCHEMA_VERSION = 5;
 
 export const TAX_MODELS = ["spain_19", "fop_3"] as const;
 export type TaxModel = (typeof TAX_MODELS)[number];
@@ -41,6 +41,9 @@ export type Transaction = {
   employeeId?: string;
   createdBy?: string;
   tax_model?: TaxModel;
+  uahRateAtCreation?: number;
+  gross_uah?: number;
+  net_uah?: number;
 };
 
 export type Project = Transaction;
@@ -184,6 +187,18 @@ export function isTransaction(value: unknown): value is Transaction {
   if (row.employeeId !== undefined && typeof row.employeeId !== "string") return false;
   if (row.createdBy !== undefined && typeof row.createdBy !== "string") return false;
   if (row.tax_model !== undefined && !isTaxModel(row.tax_model)) return false;
+  if (
+    row.uahRateAtCreation !== undefined &&
+    (!isFiniteNumber(row.uahRateAtCreation) || row.uahRateAtCreation <= 0)
+  ) {
+    return false;
+  }
+  if (row.gross_uah !== undefined && (!isFiniteNumber(row.gross_uah) || row.gross_uah < 0)) {
+    return false;
+  }
+  if (row.net_uah !== undefined && (!isFiniteNumber(row.net_uah) || row.net_uah < 0)) {
+    return false;
+  }
   return true;
 }
 

@@ -1,5 +1,6 @@
 import { BASE_CURRENCY, type Currency } from "@/types/finance";
 import { isoWeekRange } from "@/lib/week";
+import { MONTHLY_ESV_UAH } from "@/lib/tax-calculator";
 
 const FORMATTERS = new Map<string, Intl.NumberFormat>();
 
@@ -22,6 +23,29 @@ function formatter(currency: Currency): Intl.NumberFormat {
 
 export function formatMoney(amount: number, currency: Currency = BASE_CURRENCY): string {
   return normalizeIntl(formatter(currency).format(amount));
+}
+
+export function formatPlainAmount(amount: number): string {
+  return normalizeIntl(
+    new Intl.NumberFormat("uk-UA", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }).format(amount),
+  );
+}
+
+export function formatAmountWithUahApprox(
+  amountOriginal: number,
+  currency: Currency,
+  amountUah: number,
+): string {
+  const primary = `${formatPlainAmount(amountOriginal)} ${currency}`;
+  if (currency === "UAH") return primary;
+  return `${primary} (≈ ${formatPlainAmount(amountUah)} грн)`;
+}
+
+export function formatMonthlyEsvNote(): string {
+  return `Резерв ЄСВ за місяць: ${formatPlainAmount(MONTHLY_ESV_UAH)} грн (фіксовано 22% від МЗП)`;
 }
 
 export function formatSignedMoney(

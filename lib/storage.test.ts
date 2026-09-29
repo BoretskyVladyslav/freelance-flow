@@ -23,7 +23,7 @@ describe("migrateSnapshot", () => {
       displayCurrency: "EUR",
     });
 
-    expect(BACKUP_SCHEMA_VERSION).toBe(4);
+    expect(BACKUP_SCHEMA_VERSION).toBe(5);
     expect(snapshot.transactions).toHaveLength(1);
     expect(snapshot.transactions[0].id).toBe("tx_1");
     expect(snapshot.displayCurrency).toBe("UAH");
@@ -60,8 +60,8 @@ describe("migrateSnapshot", () => {
   });
 
   it("uses an empty list only when the stored value is missing or not an array", () => {
-    expect(migrateSnapshot({ schemaVersion: 4 }).transactions).toEqual([]);
-    expect(migrateSnapshot({ schemaVersion: 4, transactions: null }).transactions).toEqual([]);
+    expect(migrateSnapshot({ schemaVersion: 5 }).transactions).toEqual([]);
+    expect(migrateSnapshot({ schemaVersion: 5, transactions: null }).transactions).toEqual([]);
   });
 });
 

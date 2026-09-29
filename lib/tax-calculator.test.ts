@@ -5,9 +5,15 @@ import {
   calculateTaxSequence,
   calculateTransaction,
   convertFromEur,
+  convertOriginalToUah,
   convertToDisplay,
   displayCurrencyGainLoss,
   moneyNumber,
+  MONTHLY_ESV_UAH,
+  monthlyEsvDisplayAmount,
+  netAfterMonthlyEsv,
+  resolveUahSnapshot,
+  shouldApplyMonthlyEsv,
 } from "@/lib/tax-calculator";
 
 describe("calculateTaxSequence", () => {
@@ -62,7 +68,7 @@ describe("calculateTaxSequence", () => {
     expect(pln.taxableBase).toBe(225.4);
   });
 
-  it("applies FOP 6% instead of Spain 19% while keeping the same rounding sequence", () => {
+  it("applies FOP 30% fee and 6% tax from the same taxable base", () => {
     const result = calculateTaxSequence({
       grossAmount: 1000,
       customFee: 50,
@@ -76,8 +82,8 @@ describe("calculateTaxSequence", () => {
       taxableBase: 855,
       spainTax: 51.3,
       postSpainBase: 803.7,
-      companyTax: 241.11,
-      netPayout: 562.59,
+      companyTax: 256.5,
+      netPayout: 547.2,
     });
   });
 
@@ -156,11 +162,11 @@ describe("calculateProjectTaxes", () => {
     });
   });
 
-  it("returns FOP 6% then 30% company fee", () => {
+  it("returns FOP 30% fee and 6% tax from the taxable base", () => {
     expect(calculateProjectTaxes(1000, "fop_3")).toEqual({
       taxes: 60,
-      companyFee: 282,
-      net: 658,
+      companyFee: 300,
+      net: 640,
       taxLabel: "ФОП 3 гр. (6%)",
     });
   });
@@ -280,5 +286,44 @@ describe("exchange rate helpers", () => {
     expect(uahPerUnit("USD", rates)).toBeCloseTo(41.81818182, 5);
     expect(uahPerUnit("EUR", rates)).toBeCloseTo(45.45454545, 5);
     expect(uahPerUnit("UAH", rates)).toBe(1);
+  });
+});
+
+describe("UAH snapshot and monthly ESV", () => {
+  const rates = {
+    base: "EUR" as const,
+    fetchedAt: "2026-08-29T00:00:00.000Z",
+    toEur: {
+      EUR: 1,
+      USD: 0.92,
+      UAH: 0.022,
+      PLN: 0.23,
+    },
+  };
+
+  it("converts original FX amounts to UAH without rounding the rate to 2 decimals", () => {
+    expect(convertOriginalToUah(102.4, "USD", rates)).toBe(4282.18);
+    expect(convertOriginalToUah(1000, "UAH", rates)).toBe(1000);
+  });
+
+  it("locks gross_uah and net_uah from the creation rate", () => {
+    const snapshot = resolveUahSnapshot({
+      grossAmount: 1000,
+      currency: "USD",
+      netPayoutEur: 547.2,
+      exchangeRateAtCreation: 0.9,
+      rates,
+    });
+    expect(snapshot.uahRateAtCreation).toBeCloseTo(0.9 / 0.022, 8);
+    expect(snapshot.gross_uah).toBe(40909.09);
+    expect(snapshot.net_uah).toBe(24872.73);
+  });
+
+  it("subtracts the fixed monthly ESV from month-filtered net", () => {
+    expect(MONTHLY_ESV_UAH).toBe(1760);
+    expect(shouldApplyMonthlyEsv({ month: "2026-09" })).toBe(true);
+    expect(shouldApplyMonthlyEsv({ month: "all" })).toBe(false);
+    expect(monthlyEsvDisplayAmount("UAH", rates)).toBe(1760);
+    expect(netAfterMonthlyEsv(5000, "UAH", rates)).toBe(3240);
   });
 });

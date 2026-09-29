@@ -29,7 +29,7 @@ import {
 } from "@/components/ui/tooltip";
 import { useFinance } from "@/components/finance/finance-provider";
 import { resolveRate } from "@/lib/exchange-rates";
-import { formatMoney, formatRate, formatWeekSpan } from "@/lib/format";
+import { formatAmountWithUahApprox, formatRate, formatWeekSpan } from "@/lib/format";
 import {
   PLATFORM_LABELS,
   STATUS_DESCRIPTIONS,
@@ -37,7 +37,7 @@ import {
   TAX_MODEL_LABELS,
 } from "@/lib/labels";
 import { applyEndDateChange, applyStatusChange } from "@/lib/project-automation";
-import { calculateTransaction, convertToDisplay, taxModelLabel } from "@/lib/tax-calculator";
+import { calculateTransaction, convertToDisplay, resolveUahSnapshot, taxModelLabel } from "@/lib/tax-calculator";
 import { isoWeekFromIsoDate, todayIsoDate, weekKeyFromIsoDate } from "@/lib/week";
 import {
   CURRENCIES,
@@ -169,10 +169,9 @@ export function QuickEntryDialog({
 
   const formatPreviewAmount = useCallback(
     (amountEur: number): string => {
-      return formatMoney(
-        convertToDisplay(amountEur, form.currency, previewRates),
-        form.currency,
-      );
+      const original = convertToDisplay(amountEur, form.currency, previewRates);
+      const uah = convertToDisplay(amountEur, "UAH", previewRates);
+      return formatAmountWithUahApprox(original, form.currency, uah);
     },
     [form.currency, previewRates],
   );
@@ -237,6 +236,19 @@ export function QuickEntryDialog({
     }
 
     const clientName = form.clientName.trim();
+    const uahSnapshot = preview
+      ? resolveUahSnapshot({
+          grossAmount,
+          currency: form.currency,
+          netPayoutEur: preview.netPayout,
+          exchangeRateAtCreation: lockedRate,
+          rates,
+          uahRateAtCreation:
+            transaction && transaction.currency === form.currency
+              ? transaction.uahRateAtCreation
+              : undefined,
+        })
+      : undefined;
     const payload = {
       title: form.title.trim(),
       clientName: clientName || undefined,
@@ -253,6 +265,9 @@ export function QuickEntryDialog({
       notes: form.notes,
       tax_model: form.tax_model,
       exchangeRateAtCreation: lockedRate,
+      uahRateAtCreation: uahSnapshot?.uahRateAtCreation,
+      gross_uah: uahSnapshot?.gross_uah,
+      net_uah: uahSnapshot?.net_uah,
     };
 
     if (transaction) {
@@ -282,6 +297,8 @@ export function QuickEntryDialog({
     customFee,
     lockedRate,
     onOpenChange,
+    preview,
+    rates,
     transaction,
     updateTransaction,
     validate,
@@ -536,27 +553,44 @@ export function QuickEntryDialog({
           {preview ? (
             <div className="grid grid-cols-2 gap-2 rounded-lg border bg-muted/40 p-3 text-xs sm:grid-cols-4">
               <div>
-                <div className="text-muted-foreground">База ({form.currency})</div>
+                <div className="text-muted-foreground">База</div>
                 <div className="tabular-nums">
                   {formatPreviewAmount(preview.taxableBase)}
                 </div>
               </div>
+              {form.tax_model === "fop_3" ? (
+                <>
+                  <div>
+                    <div className="text-muted-foreground">Фірма 30%</div>
+                    <div className="tabular-nums">
+                      {formatPreviewAmount(preview.companyTax)}
+                    </div>
+                  </div>
+                  <div>
+                    <div className="text-muted-foreground">{taxModelLabel(form.tax_model)}</div>
+                    <div className="tabular-nums">
+                      {formatPreviewAmount(preview.spainTax)}
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div>
+                    <div className="text-muted-foreground">{taxModelLabel(form.tax_model)}</div>
+                    <div className="tabular-nums">
+                      {formatPreviewAmount(preview.spainTax)}
+                    </div>
+                  </div>
+                  <div>
+                    <div className="text-muted-foreground">Фірма 30%</div>
+                    <div className="tabular-nums">
+                      {formatPreviewAmount(preview.companyTax)}
+                    </div>
+                  </div>
+                </>
+              )}
               <div>
-                <div className="text-muted-foreground">
-                  {taxModelLabel(form.tax_model)} ({form.currency})
-                </div>
-                <div className="tabular-nums">
-                  {formatPreviewAmount(preview.spainTax)}
-                </div>
-              </div>
-              <div>
-                <div className="text-muted-foreground">Фірма 30% ({form.currency})</div>
-                <div className="tabular-nums">
-                  {formatPreviewAmount(preview.companyTax)}
-                </div>
-              </div>
-              <div>
-                <div className="text-muted-foreground">Net ({form.currency})</div>
+                <div className="text-muted-foreground">Net</div>
                 <div className="tabular-nums font-medium">
                   {formatPreviewAmount(preview.netPayout)}
                 </div>
