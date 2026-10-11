@@ -678,12 +678,19 @@ export const LedgerTable = memo(function LedgerTable({ onEdit }: LedgerTableProp
   }, []);
 
   if (!hydrated) {
-    return <p className="text-sm text-muted-foreground">Завантаження журналу…</p>;
+    return (
+      <div
+        className="min-h-40 animate-pulse rounded-lg bg-muted/70 transition-all duration-300 ease-out"
+        aria-busy="true"
+      >
+        <p className="sr-only">Завантаження журналу…</p>
+      </div>
+    );
   }
 
   if (total === 0) {
     return (
-      <p className="rounded-lg border border-dashed p-8 text-center text-sm text-muted-foreground">
+      <p className="rounded-lg border border-dashed p-8 text-center text-sm text-muted-foreground transition-all duration-300 ease-out">
         Немає проєктів, які відповідають вибраним фільтрам.
       </p>
     );
@@ -702,6 +709,10 @@ export const LedgerTable = memo(function LedgerTable({ onEdit }: LedgerTableProp
 
   return (
     <>
+      <div
+        key={`${filterKey}:${currentPage}:${pageSize}`}
+        className="ff-page-in transition-all duration-300 ease-out"
+      >
       <div className="grid grid-cols-1 gap-3 md:hidden">
         {visibleRows.map((row) => (
           <LedgerCard key={row.id} row={row} {...rowProps} />
@@ -736,6 +747,7 @@ export const LedgerTable = memo(function LedgerTable({ onEdit }: LedgerTableProp
             ))}
           </TableBody>
         </Table>
+      </div>
       </div>
       {showFooter ? (
         <LedgerFooter

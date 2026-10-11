@@ -17,40 +17,34 @@ function roundTo(value: number, decimals: number): number {
 }
 
 /**
- * Ease-out count toward `value`.
- * The first render and the hydration commit keep the exact value so SSR matches.
- * Later updates (period or employee filters) animate.
+ * Ease-out count toward `value` over about 500ms.
+ * The displayed amount starts at 0, so the first mount counts up, and later
+ * filter or currency changes continue from the number already on screen.
+ * Reduced motion snaps to the target. Mount this only after hydration.
  */
 export function useCountUp(value: number, options?: CountUpOptions): number {
-  const duration = options?.duration ?? 400;
+  const duration = options?.duration ?? 500;
   const decimals = options?.decimals ?? 2;
-  const [display, setDisplay] = useState(value);
-  const displayRef = useRef(value);
-  const hydratedRef = useRef(false);
+  const [display, setDisplay] = useState(0);
+  const displayRef = useRef(0);
   const frameRef = useRef(0);
 
   useEffect(() => {
-    if (!hydratedRef.current) {
-      hydratedRef.current = true;
-      displayRef.current = value;
-      setDisplay(value);
-      return;
-    }
-
+    const target = Number.isFinite(value) ? value : 0;
     if (!Number.isFinite(value) || prefersReducedMotion() || duration <= 0) {
-      displayRef.current = value;
-      setDisplay(value);
+      displayRef.current = target;
+      setDisplay(target);
       return;
     }
 
     const from = displayRef.current;
-    if (from === value) return;
+    if (from === target) return;
 
     const start = performance.now();
     const tick = (now: number) => {
       const progress = Math.min(1, (now - start) / duration);
       const eased = 1 - (1 - progress) ** 3;
-      const next = progress === 1 ? value : roundTo(from + (value - from) * eased, decimals);
+      const next = progress === 1 ? target : roundTo(from + (target - from) * eased, decimals);
       if (next !== displayRef.current) {
         displayRef.current = next;
         setDisplay(next);
@@ -58,8 +52,8 @@ export function useCountUp(value: number, options?: CountUpOptions): number {
       if (progress < 1) {
         frameRef.current = requestAnimationFrame(tick);
       } else {
-        displayRef.current = value;
-        setDisplay(value);
+        displayRef.current = target;
+        setDisplay(target);
       }
     };
 

@@ -228,7 +228,7 @@ export function Dashboard() {
       <MetricCards />
       <WeeklyChart />
 
-      <Card className="min-w-0 overflow-visible">
+      <Card className="min-w-0 overflow-visible transition-all duration-300 ease-out">
         <CardHeader className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
           <CardTitle>Журнал транзакцій</CardTitle>
           <LedgerFilters />

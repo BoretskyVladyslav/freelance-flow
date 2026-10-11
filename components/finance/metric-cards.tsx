@@ -103,7 +103,7 @@ export const MetricCards = memo(function MetricCards() {
       {cards.map((card) => (
         <Card
           key={card.key}
-          className="flex h-full min-w-0 flex-col justify-between [--card-spacing:--spacing(3)] md:[--card-spacing:--spacing(4)]"
+          className="flex h-full min-w-0 flex-col justify-between transition-all duration-300 ease-out [--card-spacing:--spacing(3)] md:[--card-spacing:--spacing(4)]"
         >
           <CardHeader className="gap-2">
             <div className="flex h-8 items-start justify-between gap-2 md:h-10">
@@ -133,7 +133,7 @@ export const MetricCards = memo(function MetricCards() {
         </Card>
       ))}
       {esv.showEsv ? (
-        <Card className="col-span-2 flex h-full min-w-0 flex-col justify-between [--card-spacing:--spacing(3)] md:col-span-4 md:[--card-spacing:--spacing(4)]">
+        <Card className="col-span-2 flex h-full min-w-0 flex-col justify-between transition-all duration-300 ease-out [--card-spacing:--spacing(3)] md:col-span-4 md:[--card-spacing:--spacing(4)]">
           <CardHeader className="gap-2">
             <CardDescription className="text-xs leading-4 md:text-sm md:leading-5">
               {formatMonthlyEsvNote()}

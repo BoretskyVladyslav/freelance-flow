@@ -38,12 +38,31 @@ function tokensMatch(provided: string, expected: string): boolean {
   return timingSafeEqual(left, right);
 }
 
+function hasServiceRoleKey(): boolean {
+  const configured = (process.env.SUPABASE_SERVICE_ROLE_KEY ?? "").trim();
+  return Boolean(configured) && Boolean(getServiceRoleKey());
+}
+
+function logMissingWidgetConfig(): void {
+  if (!hasServiceRoleKey()) {
+    console.error(
+      "[widget/summary] SUPABASE_SERVICE_ROLE_KEY is missing. Refusing to read projects and returning 503.",
+    );
+  }
+  if (!isSupabaseConfigured()) {
+    console.error(
+      "[widget/summary] NEXT_PUBLIC_SUPABASE_URL or NEXT_PUBLIC_SUPABASE_ANON_KEY is missing. Returning 503.",
+    );
+  }
+}
+
 export async function GET(request: Request) {
   if (!tokensMatch(providedToken(request), expectedToken())) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  if (!isSupabaseConfigured() || !getServiceRoleKey()) {
+  if (!isSupabaseConfigured() || !hasServiceRoleKey()) {
+    logMissingWidgetConfig();
     return NextResponse.json(
       { error: "Widget data source is not configured." },
       { status: 503 },
