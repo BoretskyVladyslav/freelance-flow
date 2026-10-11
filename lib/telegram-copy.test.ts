@@ -83,18 +83,24 @@ describe("formatTransactionTelegram", () => {
     expect(text).not.toContain("Клієнт");
   });
 
-  it("formats FOP tax for a fop_3 project with fee first, then tax on the remainder", () => {
+  it("formats FOP tax as paid by the recipient and pays Yuri the post-firm amount", () => {
     const [view] = withBreakdowns([{ ...usd, tax_model: "fop_3" }], LAST_RESORT_RATES);
     const text = formatTransactionTelegram(view);
 
-    expect(text).toContain("🏢 Комісія фірми (30%): -285,00 USD");
-    expect(text).toContain("🏛 Податки ФОП (5% ЄП + 1% ВЗ): -39,90 USD");
-    expect(text).toContain("✅ До виплати (Net): 625,10 USD");
+    expect(text).toBe(
+      [
+        "📋 Проєкт: Landing",
+        "👤 Клієнт: Acme",
+        "━━━━━━━━━━━━━━━━━━",
+        "💰 Валовий (Gross): 1 000,00 USD",
+        "🏢 Комісія фірми (30%): -285,00 USD",
+        "🏛 Податки ФОП (5% + 1%): 39,90 USD (сплачує отримувач 🤝)",
+        "━━━━━━━━━━━━━━━━━━",
+        "✅ До виплати (Net): 665,00 USD",
+      ].join("\n"),
+    );
+    expect(text).not.toContain("625,10");
     expect(text).not.toContain("Податок Іспанії");
-    const companyIndex = text.indexOf("Комісія фірми");
-    const taxIndex = text.indexOf("Податки ФОП");
-    expect(companyIndex).toBeGreaterThan(-1);
-    expect(taxIndex).toBeGreaterThan(companyIndex);
   });
 });
 
@@ -157,5 +163,20 @@ describe("formatEmployeePeriodTelegram", () => {
 
     expect(text).toContain("Резерв ЄСВ за місяць: 1 760,00 грн (фіксовано 22% від МЗП)");
     expect(text).toContain("Чистий залишок після ЄСВ");
+  });
+
+  it("totals FOP projects at the post-firm cash amount", () => {
+    const views = withBreakdowns([{ ...usd, tax_model: "fop_3" }], LAST_RESORT_RATES);
+    const text = formatEmployeePeriodTelegram({
+      employeeLabel: "Юрій",
+      filters: DEFAULT_FILTERS,
+      views,
+      displayCurrency: "EUR",
+      rates: LAST_RESORT_RATES,
+    });
+
+    expect(text).toContain("✅ 598,50 EUR");
+    expect(text).toContain("✅ Разом до виплати (Net): 598,50 EUR");
+    expect(text).not.toContain("562,59");
   });
 });

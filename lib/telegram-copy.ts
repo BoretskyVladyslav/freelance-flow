@@ -32,13 +32,18 @@ function toOriginal(amountEur: number, toEur: number): number {
   return moneyNumber(new Decimal(amountEur).div(toEur));
 }
 
+/** Cash Yuri receives. FOP tax stays with the account owner, so it is not deducted. */
+export function cashPayoutEur(row: TransactionView): number {
+  return getTaxModel(row) === "fop_3" ? row.breakdown.postSpainBase : row.breakdown.netPayout;
+}
+
 export function formatTelegramTaxLine(
   taxModel: TaxModel | undefined,
   taxAmount: string,
   currency: string,
 ): string {
   if (getTaxModel(taxModel) === "fop_3") {
-    return `🏛 Податки ФОП (5% ЄП + 1% ВЗ): -${taxAmount} ${currency}`;
+    return `🏛 Податки ФОП (5% + 1%): ${taxAmount} ${currency} (сплачує отримувач 🤝)`;
   }
   return `🏛 Податок Іспанії (19%): -${taxAmount} ${currency}`;
 }
@@ -50,21 +55,22 @@ export function formatTransactionTelegram(row: TransactionView): string {
   const gross = formatTelegramNumber(moneyNumber(row.grossAmount));
   const spainTax = formatTelegramNumber(toOriginal(row.breakdown.spainTax, rate));
   const companyTax = formatTelegramNumber(toOriginal(row.breakdown.companyTax, rate));
-  const net = formatTelegramNumber(toOriginal(row.breakdown.netPayout, rate));
+  const payout = formatTelegramNumber(toOriginal(cashPayoutEur(row), rate));
+  const taxModel = getTaxModel(row);
 
   return [
     `📋 Проєкт: ${row.title}`,
     client ? `👤 Клієнт: ${client}` : "",
     DIVIDER,
     `💰 Валовий (Gross): ${gross} ${currency}`,
-    getTaxModel(row) === "fop_3"
+    taxModel === "fop_3"
       ? `🏢 Комісія фірми (30%): -${companyTax} ${currency}`
-      : formatTelegramTaxLine(getTaxModel(row), spainTax, currency),
-    getTaxModel(row) === "fop_3"
-      ? formatTelegramTaxLine(getTaxModel(row), spainTax, currency)
+      : formatTelegramTaxLine(taxModel, spainTax, currency),
+    taxModel === "fop_3"
+      ? formatTelegramTaxLine(taxModel, spainTax, currency)
       : `🏢 Комісія фірми (30%): -${companyTax} ${currency}`,
     DIVIDER,
-    `✅ До виплати (Net): ${net} ${currency}`,
+    `✅ До виплати (Net): ${payout} ${currency}`,
   ]
     .filter((line) => line !== "")
     .join("\n");
@@ -98,7 +104,7 @@ export function formatEmployeePeriodTelegram(input: {
   const items = projects.map((row, index) => {
     const client = clientNameOf(row);
     const net = formatTelegramNumber(
-      convertToDisplay(row.breakdown.netPayout, input.displayCurrency, input.rates),
+      convertToDisplay(cashPayoutEur(row), input.displayCurrency, input.rates),
     );
     const gross = formatTelegramNumber(moneyNumber(row.grossAmount));
     const lines = [
@@ -110,7 +116,7 @@ export function formatEmployeePeriodTelegram(input: {
   });
 
   const totalNetEur = moneyNumber(
-    projects.reduce((acc, row) => acc.plus(row.breakdown.netPayout), new Decimal(0)),
+    projects.reduce((acc, row) => acc.plus(cashPayoutEur(row)), new Decimal(0)),
   );
   const totalNet = convertToDisplay(totalNetEur, input.displayCurrency, input.rates);
   const applyEsv = shouldApplyMonthlyEsv(input.filters);

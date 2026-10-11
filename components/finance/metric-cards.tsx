@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { memo, useMemo } from "react";
 
 import {
   Building2,
@@ -8,6 +8,7 @@ import {
   Wallet,
   type LucideIcon,
 } from "lucide-react";
+import { AnimatedAmount } from "@/components/finance/animated-amount";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useFinance } from "@/components/finance/finance-provider";
 import { formatMoney, formatMonthlyEsvNote } from "@/lib/format";
@@ -17,7 +18,7 @@ import {
 } from "@/lib/tax-calculator";
 import { cn } from "@/lib/utils";
 
-export function MetricCards() {
+export const MetricCards = memo(function MetricCards() {
   const {
     displayTotals,
     displayCurrency,
@@ -27,16 +28,21 @@ export function MetricCards() {
     filters,
     rates,
   } = useFinance();
-  const showEsv = shouldApplyMonthlyEsv(filters);
-  const netAfterEsv = showEsv
-    ? netAfterMonthlyEsv(displayTotals.netPayout, displayCurrency, rates)
-    : null;
+  const esv = useMemo(() => {
+    const showEsv = shouldApplyMonthlyEsv(filters);
+    return {
+      showEsv,
+      netAfterEsv: showEsv
+        ? netAfterMonthlyEsv(displayTotals.netPayout, displayCurrency, rates)
+        : null,
+    };
+  }, [displayCurrency, displayTotals.netPayout, filters, rates]);
 
   const cards = useMemo<
     Array<{
       key: string;
       title: string;
-      value: string;
+      amount: number;
       description: string;
       icon: LucideIcon;
       valueClass?: string;
@@ -46,14 +52,14 @@ export function MetricCards() {
     {
       key: "gross",
       title: "Загальний дохід (Gross)",
-      value: formatMoney(displayTotals.grossInBase, displayCurrency),
+      amount: displayTotals.grossInBase,
       description: "Конвертовано у вибрану валюту від бази EUR.",
       icon: Wallet,
     },
     {
       key: "spain",
       title: "Податки (ФОП / Резерв)",
-      value: formatMoney(displayTotals.spainTax, displayCurrency),
+      amount: displayTotals.spainTax,
       description: isAdmin && teamScope === "all"
         ? "Агрегація по компанії. Кожен проєкт рахується за своєю моделлю (ФОП 6% або Іспанія 19%)."
         : "Кожен проєкт рахується за своєю моделлю (ФОП 6% або Іспанія 19%).",
@@ -62,7 +68,7 @@ export function MetricCards() {
     {
       key: "company",
       title: "Податок фірми (30%)",
-      value: formatMoney(displayTotals.companyTax, displayCurrency),
+      amount: displayTotals.companyTax,
       description: isAdmin && teamScope === "all"
         ? "Агрегація по компанії. ФОП: 30% від бази, потім 6% від залишку. Іспанія: 30% після податку."
         : "ФОП: 30% від бази, потім 6% від залишку. Іспанія: 30% після податку.",
@@ -72,7 +78,7 @@ export function MetricCards() {
     {
       key: "net",
       title: "Чистий дохід до виплати (Net)",
-      value: formatMoney(displayTotals.netPayout, displayCurrency),
+      amount: displayTotals.netPayout,
       description: isAdmin && teamScope === "all"
         ? `Чистий дохід по компанії. До виплати: ${formatMoney(displayTotals.remainingToBePaid, displayCurrency)}`
         : `Чистий дохід за вашими проєктами. До виплати: ${formatMoney(displayTotals.remainingToBePaid, displayCurrency)}`,
@@ -93,11 +99,7 @@ export function MetricCards() {
   );
 
   return (
-    <section
-      aria-live="polite"
-      aria-atomic="true"
-      className="grid min-w-0 grid-cols-2 items-stretch gap-3 md:grid-cols-4 md:gap-4"
-    >
+    <section className="grid min-w-0 grid-cols-2 items-stretch gap-3 md:grid-cols-4 md:gap-4">
       {cards.map((card) => (
         <Card
           key={card.key}
@@ -116,7 +118,11 @@ export function MetricCards() {
                 card.valueClass,
               )}
             >
-              {hydrated ? card.value : "—"}
+              <AnimatedAmount
+                amount={card.amount}
+                currency={displayCurrency}
+                ready={hydrated}
+              />
             </CardTitle>
           </CardHeader>
           <CardContent className="mt-auto">
@@ -126,20 +132,29 @@ export function MetricCards() {
           </CardContent>
         </Card>
       ))}
-      {showEsv ? (
+      {esv.showEsv ? (
         <Card className="col-span-2 flex h-full min-w-0 flex-col justify-between [--card-spacing:--spacing(3)] md:col-span-4 md:[--card-spacing:--spacing(4)]">
           <CardHeader className="gap-2">
             <CardDescription className="text-xs leading-4 md:text-sm md:leading-5">
               {formatMonthlyEsvNote()}
             </CardDescription>
             <CardTitle className="text-xl font-bold leading-snug tabular-nums text-emerald-600 sm:text-2xl dark:text-emerald-400">
-              {hydrated && netAfterEsv !== null
-                ? `Чистий залишок після ЄСВ: ${formatMoney(netAfterEsv, displayCurrency)}`
-                : "—"}
+              {hydrated && esv.netAfterEsv !== null ? (
+                <span className="inline-flex max-w-full flex-wrap items-baseline gap-x-2">
+                  <span>Чистий залишок після ЄСВ:</span>
+                  <AnimatedAmount
+                    amount={esv.netAfterEsv}
+                    currency={displayCurrency}
+                    ready
+                  />
+                </span>
+              ) : (
+                "—"
+              )}
             </CardTitle>
           </CardHeader>
         </Card>
       ) : null}
     </section>
   );
-}
+});

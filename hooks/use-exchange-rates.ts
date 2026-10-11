@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { LAST_RESORT_RATES } from "@/lib/exchange-rates";
 import { isExchangeRates, type ExchangeRates } from "@/types/finance";
 
@@ -75,8 +75,16 @@ export function useExchangeRates(persistedRates: ExchangeRates | null) {
     );
   }, [persistedRates]);
 
-  return {
-    ...state,
-    refresh: () => fetchRates(true),
-  };
+  const refresh = useCallback(() => fetchRates(true), [fetchRates]);
+
+  return useMemo(
+    () => ({
+      rates: state.rates,
+      loading: state.loading,
+      error: state.error,
+      refreshing: state.refreshing,
+      refresh,
+    }),
+    [refresh, state.error, state.loading, state.rates, state.refreshing],
+  );
 }

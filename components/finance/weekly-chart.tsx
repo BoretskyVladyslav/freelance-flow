@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { memo, useCallback, useMemo, useState } from "react";
 import {
   Bar,
   BarChart,
@@ -23,12 +23,21 @@ const PERIOD_OPTIONS: Array<{ value: ChartPeriod; label: string }> = [
   { value: "month", label: "За місяцями" },
 ];
 
-export function WeeklyChart() {
+export const WeeklyChart = memo(function WeeklyChart() {
   const { views, rates, displayCurrency, hydrated } = useFinance();
   const [period, setPeriod] = useState<ChartPeriod>("week");
   const data = useMemo(
     () => chartSeries(views, displayCurrency, rates, period),
     [displayCurrency, period, rates, views],
+  );
+  const formatAxisTick = useCallback(
+    (value: number) => formatCompactMoney(value, displayCurrency),
+    [displayCurrency],
+  );
+  const formatTooltipValue = useCallback(
+    (value: unknown) =>
+      formatMoney(typeof value === "number" ? value : Number(value), displayCurrency),
+    [displayCurrency],
   );
 
   return (
@@ -56,15 +65,9 @@ export function WeeklyChart() {
                   axisLine={false}
                   width={56}
                   tick={{ fontSize: 11 }}
-                  tickFormatter={(value: number) =>
-                    formatCompactMoney(value, displayCurrency)
-                  }
+                  tickFormatter={formatAxisTick}
                 />
-                <Tooltip
-                  formatter={(value) =>
-                    formatMoney(typeof value === "number" ? value : Number(value), displayCurrency)
-                  }
-                />
+                <Tooltip formatter={formatTooltipValue} />
                 <Legend />
                 <Bar dataKey="gross" name="Gross" fill="#1E3A8A" radius={[4, 4, 0, 0]} />
                 <Bar dataKey="net" name="Net" fill="#10B981" radius={[4, 4, 0, 0]} />
@@ -93,4 +96,4 @@ export function WeeklyChart() {
       </CardContent>
     </Card>
   );
-}
+});

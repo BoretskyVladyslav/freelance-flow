@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useState } from "react";
+import dynamic from "next/dynamic";
 import { Copy, Plus, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 import { LogoutButton } from "@/components/auth/logout-button";
@@ -12,8 +13,6 @@ import { LedgerFilters } from "@/components/finance/ledger-filters";
 import { LedgerTable } from "@/components/finance/ledger-table";
 import { MetricCards } from "@/components/finance/metric-cards";
 import { PdfReportButton } from "@/components/finance/pdf-report-button";
-import { QuickEntryDialog } from "@/components/finance/quick-entry-dialog";
-import { WeeklyChart } from "@/components/finance/weekly-chart";
 import { TeamPanel } from "@/components/team/team-panel";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { Button } from "@/components/ui/button";
@@ -23,6 +22,24 @@ import { formatDate, formatRate } from "@/lib/format";
 import { formatEmployeePeriodTelegram } from "@/lib/telegram-copy";
 import { useMounted } from "@/hooks/use-mounted";
 import type { Transaction } from "@/types/finance";
+
+const WeeklyChart = dynamic(
+  () => import("@/components/finance/weekly-chart").then((mod) => mod.WeeklyChart),
+  {
+    ssr: false,
+    loading: () => (
+      <div
+        className="h-[22rem] rounded-xl border border-border bg-card print:hidden"
+        aria-hidden
+      />
+    ),
+  },
+);
+
+const QuickEntryDialog = dynamic(
+  () => import("@/components/finance/quick-entry-dialog").then((mod) => mod.QuickEntryDialog),
+  { ssr: false },
+);
 
 export function Dashboard() {
   const {
