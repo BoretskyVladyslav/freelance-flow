@@ -62,11 +62,11 @@ describe("formatTransactionTelegram", () => {
         "📋 Проєкт: Landing",
         "👤 Клієнт: Acme",
         "━━━━━━━━━━━━━━━━━━",
-        "💰 Валовий (Gross): 1 000,00 USD",
-        "🏛 Податок Іспанії (19%): -180,50 USD",
+        "💰 Валовий (Gross): 1 000,00 USD (≈ 900,00 €)",
         "🏢 Комісія фірми (30%): -230,86 USD",
+        "🏛 Податок Іспанії (19%): -180,50 USD",
         "━━━━━━━━━━━━━━━━━━",
-        "✅ До виплати (Net): 538,64 USD",
+        "✅ До виплати (Net): 538,64 USD (≈ 484,78 €)",
       ].join("\n"),
     );
   });
@@ -77,9 +77,10 @@ describe("formatTransactionTelegram", () => {
 
     expect(text.startsWith("📋 Проєкт: CRM\n━━━━━━━━━━━━━━━━━━\n")).toBe(true);
     expect(text).toContain("💰 Валовий (Gross): 200,00 EUR");
-    expect(text).toContain("🏛 Податок Іспанії (19%): -38,00 EUR");
     expect(text).toContain("🏢 Комісія фірми (30%): -48,60 EUR");
+    expect(text).toContain("🏛 Податок Іспанії (19%): -38,00 EUR");
     expect(text).toContain("✅ До виплати (Net): 113,40 EUR");
+    expect(text).not.toContain("≈");
     expect(text).not.toContain("Клієнт");
   });
 
@@ -92,11 +93,11 @@ describe("formatTransactionTelegram", () => {
         "📋 Проєкт: Landing",
         "👤 Клієнт: Acme",
         "━━━━━━━━━━━━━━━━━━",
-        "💰 Валовий (Gross): 1 000,00 USD",
+        "💰 Валовий (Gross): 1 000,00 USD (≈ 900,00 €)",
         "🏢 Комісія фірми (30%): -285,00 USD",
         "🏛 Податки ФОП (5% + 1%): 39,90 USD (сплачує отримувач 🤝)",
         "━━━━━━━━━━━━━━━━━━",
-        "✅ До виплати (Net): 665,00 USD",
+        "✅ До виплати (Net): 665,00 USD (≈ 598,50 €)",
       ].join("\n"),
     );
     expect(text).not.toContain("625,10");

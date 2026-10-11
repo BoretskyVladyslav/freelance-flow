@@ -4,7 +4,7 @@ import { authCookieOptions, isHttpsProtocol, mergeAuthCookieOptions } from "@/li
 import { getSupabaseEnv, isSupabaseConfigured } from "@/lib/supabase/env";
 import type { Database } from "@/types/database";
 
-const PUBLIC_PREFIXES = ["/login"];
+const PUBLIC_PREFIXES = ["/login", "/api/widget"];
 
 function isPublicPath(pathname: string): boolean {
   return PUBLIC_PREFIXES.some(

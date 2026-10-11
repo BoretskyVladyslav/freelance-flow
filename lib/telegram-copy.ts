@@ -11,7 +11,7 @@ import {
   shouldApplyMonthlyEsv,
 } from "@/lib/tax-calculator";
 import type { TransactionView } from "@/lib/aggregates";
-import { getTaxModel, type Currency, type ExchangeRates, type LedgerFilters, type TaxModel } from "@/types/finance";
+import { getTaxModel, type Currency, type ExchangeRates, type LedgerFilters } from "@/types/finance";
 
 const DIVIDER = "━━━━━━━━━━━━━━━━━━";
 
@@ -37,15 +37,9 @@ export function cashPayoutEur(row: TransactionView): number {
   return getTaxModel(row) === "fop_3" ? row.breakdown.postSpainBase : row.breakdown.netPayout;
 }
 
-export function formatTelegramTaxLine(
-  taxModel: TaxModel | undefined,
-  taxAmount: string,
-  currency: string,
-): string {
-  if (getTaxModel(taxModel) === "fop_3") {
-    return `🏛 Податки ФОП (5% + 1%): ${taxAmount} ${currency} (сплачує отримувач 🤝)`;
-  }
-  return `🏛 Податок Іспанії (19%): -${taxAmount} ${currency}`;
+function moneyWithEur(amount: string, currency: string, amountEur: number): string {
+  if (currency === "EUR") return `${amount} EUR`;
+  return `${amount} ${currency} (≈ ${formatTelegramNumber(amountEur)} €)`;
 }
 
 export function formatTransactionTelegram(row: TransactionView): string {
@@ -55,22 +49,22 @@ export function formatTransactionTelegram(row: TransactionView): string {
   const gross = formatTelegramNumber(moneyNumber(row.grossAmount));
   const spainTax = formatTelegramNumber(toOriginal(row.breakdown.spainTax, rate));
   const companyTax = formatTelegramNumber(toOriginal(row.breakdown.companyTax, rate));
-  const payout = formatTelegramNumber(toOriginal(cashPayoutEur(row), rate));
+  const payoutEur = cashPayoutEur(row);
+  const payout = formatTelegramNumber(toOriginal(payoutEur, rate));
   const taxModel = getTaxModel(row);
+  const isFop = taxModel === "fop_3";
 
   return [
     `📋 Проєкт: ${row.title}`,
     client ? `👤 Клієнт: ${client}` : "",
     DIVIDER,
-    `💰 Валовий (Gross): ${gross} ${currency}`,
-    taxModel === "fop_3"
-      ? `🏢 Комісія фірми (30%): -${companyTax} ${currency}`
-      : formatTelegramTaxLine(taxModel, spainTax, currency),
-    taxModel === "fop_3"
-      ? formatTelegramTaxLine(taxModel, spainTax, currency)
-      : `🏢 Комісія фірми (30%): -${companyTax} ${currency}`,
+    `💰 Валовий (Gross): ${moneyWithEur(gross, currency, row.breakdown.grossInBase)}`,
+    `🏢 Комісія фірми (30%): -${companyTax} ${currency}`,
+    isFop
+      ? `🏛 Податки ФОП (5% + 1%): ${spainTax} ${currency} (сплачує отримувач 🤝)`
+      : `🏛 Податок Іспанії (19%): -${spainTax} ${currency}`,
     DIVIDER,
-    `✅ До виплати (Net): ${payout} ${currency}`,
+    `✅ До виплати (Net): ${moneyWithEur(payout, currency, payoutEur)}`,
   ]
     .filter((line) => line !== "")
     .join("\n");

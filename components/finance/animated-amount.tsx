@@ -1,6 +1,6 @@
 "use client";
 
-import { useAnimatedNumber } from "@/hooks/use-animated-number";
+import { useCountUp } from "@/hooks/use-count-up";
 import { formatMoney } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import type { Currency } from "@/types/finance";
@@ -17,7 +17,7 @@ function AnimatedAmountLive({
   currency,
   className,
 }: Omit<AnimatedAmountProps, "ready">) {
-  const animated = useAnimatedNumber(amount);
+  const animated = useCountUp(amount, { duration: 400, decimals: 2 });
   const finalText = formatMoney(amount, currency);
   const liveText = formatMoney(animated, currency);
 

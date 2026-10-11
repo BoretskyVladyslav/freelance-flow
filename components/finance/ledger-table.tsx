@@ -2,7 +2,7 @@
 
 import { memo, useCallback, useEffect, useMemo, useState } from "react";
 import { flushSync } from "react-dom";
-import { Copy, MoreHorizontal } from "lucide-react";
+import { ChevronLeft, ChevronRight, Copy, MoreHorizontal } from "lucide-react";
 import { toast } from "sonner";
 import {
   AlertDialog,
@@ -100,11 +100,8 @@ function isPageSize(value: string | null): value is PageSize {
 }
 
 function shownLabel(startIndex: number, endIndex: number, total: number): string {
-  if (total === 0 || endIndex <= startIndex) return `Показано 0 з ${total} транзакцій`;
-  const from = startIndex + 1;
-  const to = endIndex;
-  if (from === to) return `Показано ${from} з ${total} транзакцій`;
-  return `Показано ${from}–${to} з ${total} транзакцій`;
+  if (total === 0 || endIndex <= startIndex) return `Показано 0–0 з ${total} транзакцій`;
+  return `Показано ${startIndex + 1}–${endIndex} з ${total} транзакцій`;
 }
 
 function sameRates(left: ExchangeRates, right: ExchangeRates): boolean {
@@ -162,25 +159,25 @@ type LedgerTableProps = {
   onEdit: (transaction: Transaction) => void;
 };
 
-type LedgerTableRowProps = {
+type LedgerEntryProps = {
   row: TransactionView;
-  layout: "card" | "table";
   displayCurrency: Currency;
   rates: ExchangeRates;
   isAdmin: boolean;
   onEdit: (transaction: Transaction) => void;
   onDelete: (transaction: Transaction) => void;
   onStatus: (id: string, status: PaymentStatus) => void;
+  onCopyTelegram: (row: TransactionView) => void;
 };
 
-function ledgerTableRowPropsAreEqual(prev: LedgerTableRowProps, next: LedgerTableRowProps): boolean {
+function ledgerEntryPropsAreEqual(prev: LedgerEntryProps, next: LedgerEntryProps): boolean {
   return (
-    prev.layout === next.layout &&
     prev.displayCurrency === next.displayCurrency &&
     prev.isAdmin === next.isAdmin &&
     prev.onEdit === next.onEdit &&
     prev.onDelete === next.onDelete &&
     prev.onStatus === next.onStatus &&
+    prev.onCopyTelegram === next.onCopyTelegram &&
     sameRates(prev.rates, next.rates) &&
     sameRow(prev.row, next.row)
   );
@@ -192,12 +189,14 @@ const RowActions = memo(function RowActions({
   onEdit,
   onDelete,
   onStatus,
+  onCopyTelegram,
 }: {
   row: TransactionView;
   isAdmin: boolean;
   onEdit: (transaction: Transaction) => void;
   onDelete: (transaction: Transaction) => void;
   onStatus: (id: string, status: PaymentStatus) => void;
+  onCopyTelegram: (row: TransactionView) => void;
 }) {
   const [open, setOpen] = useState(false);
 
@@ -222,7 +221,7 @@ const RowActions = memo(function RowActions({
         <DropdownMenuItem
           onClick={() => {
             setOpen(false);
-            void copyTransactionForTelegram(row);
+            onCopyTelegram(row);
           }}
         >
           <Copy />
@@ -344,89 +343,105 @@ const GrossAmount = memo(function GrossAmount({
   );
 });
 
-const LedgerTableRow = memo(function LedgerTableRow({
+const LedgerCard = memo(function LedgerCard({
   row,
-  layout,
   displayCurrency,
   rates,
   isAdmin,
   onEdit,
   onDelete,
   onStatus,
-}: LedgerTableRowProps) {
+  onCopyTelegram,
+}: LedgerEntryProps) {
   const net = formatMoney(
     convertToDisplay(row.breakdown.netPayout, displayCurrency, rates),
     displayCurrency,
   );
   const clientName = row.client_name || row.clientName;
 
-  if (layout === "card") {
-    return (
-      <article className="relative rounded-xl border border-slate-200/80 bg-card p-4 pr-14 shadow-sm dark:border-slate-800">
-        <div className="mb-3 flex items-start gap-2">
-          <div className="min-w-0 flex-1">
-            <p className="text-base font-semibold leading-snug">{row.title}</p>
-            {clientName ? (
-              <p className="mt-0.5 flex items-center gap-1 text-xs text-muted-foreground">
-                <span className="shrink-0">👤</span>
-                <span className="truncate font-medium">{clientName}</span>
-              </p>
-            ) : null}
-          </div>
-          <Badge
-            variant="outline"
-            className={cn("max-w-[42%] shrink-0 truncate", PLATFORM_BADGE_CLASS[row.platform])}
-          >
-            {PLATFORM_LABELS[row.platform]}
+  return (
+    <article className="relative rounded-xl border border-slate-200/80 bg-card p-4 pr-14 shadow-sm dark:border-slate-800">
+      <div className="mb-3 flex items-start gap-2">
+        <div className="min-w-0 flex-1">
+          <p className="text-base font-semibold leading-snug">{row.title}</p>
+          {clientName ? (
+            <p className="mt-0.5 flex items-center gap-1 text-xs text-muted-foreground">
+              <span className="shrink-0">👤</span>
+              <span className="truncate font-medium">{clientName}</span>
+            </p>
+          ) : null}
+        </div>
+        <Badge
+          variant="outline"
+          className={cn("max-w-[42%] shrink-0 truncate", PLATFORM_BADGE_CLASS[row.platform])}
+        >
+          {PLATFORM_LABELS[row.platform]}
+        </Badge>
+      </div>
+      <div className="absolute top-2 right-2">
+        <RowActions
+          row={row}
+          isAdmin={isAdmin}
+          onEdit={onEdit}
+          onDelete={onDelete}
+          onStatus={onStatus}
+          onCopyTelegram={onCopyTelegram}
+        />
+      </div>
+      <div className="grid grid-cols-2 gap-3 text-sm">
+        <div className="min-w-0">
+          <p className="text-[11px] text-muted-foreground">Дата / Тиждень</p>
+          <p className="font-medium whitespace-nowrap">
+            <FormattedDate value={getTransactionStartDate(row)} />
+          </p>
+          <p className="text-xs text-muted-foreground">{rowWeekSpan(row)}</p>
+        </div>
+        <div className="min-w-0">
+          <p className="text-[11px] text-muted-foreground">Gross</p>
+          <p className="min-w-0">
+            <GrossAmount row={row} rates={rates} />
+          </p>
+        </div>
+        <div className="min-w-0">
+          <p className="text-[11px] text-muted-foreground">Статус</p>
+          <Badge variant="outline" className={STATUS_CLASS[row.status]}>
+            {STATUS_LABELS[row.status]}
           </Badge>
         </div>
-        <div className="absolute top-2 right-2">
-          <RowActions
-            row={row}
-            isAdmin={isAdmin}
-            onEdit={onEdit}
-            onDelete={onDelete}
-            onStatus={onStatus}
-          />
+        <div className="min-w-0">
+          <p className="text-[11px] text-muted-foreground">Net</p>
+          <p className="tabular-nums text-base font-bold text-emerald-600 dark:text-emerald-400">
+            {net}
+          </p>
         </div>
-        <div className="grid grid-cols-2 gap-3 text-sm">
-          <div className="min-w-0">
-            <p className="text-[11px] text-muted-foreground">Дата / Тиждень</p>
-            <p className="font-medium whitespace-nowrap">
-              <FormattedDate value={getTransactionStartDate(row)} />
-            </p>
-            <p className="text-xs text-muted-foreground">{rowWeekSpan(row)}</p>
-          </div>
-          <div className="min-w-0">
-            <p className="text-[11px] text-muted-foreground">Gross</p>
-            <p className="min-w-0">
-              <GrossAmount row={row} rates={rates} />
-            </p>
-          </div>
-          <div className="min-w-0">
-            <p className="text-[11px] text-muted-foreground">Статус</p>
-            <Badge variant="outline" className={STATUS_CLASS[row.status]}>
-              {STATUS_LABELS[row.status]}
-            </Badge>
-          </div>
-          <div className="min-w-0">
-            <p className="text-[11px] text-muted-foreground">Net</p>
-            <p className="tabular-nums text-base font-bold text-emerald-600 dark:text-emerald-400">
-              {net}
-            </p>
-          </div>
-        </div>
-        <button
-          type="button"
-          className={cn(buttonVariants({ variant: "outline", size: "sm" }), "mt-3 h-11 w-full")}
-          onClick={() => void copyTransactionForTelegram(row)}
-        >
-          <Copy />
-          Копіювати для Telegram
-        </button>
-      </article>
-    );
-  }
+      </div>
+      <button
+        type="button"
+        className={cn(buttonVariants({ variant: "outline", size: "sm" }), "mt-3 h-11 w-full")}
+        onClick={() => onCopyTelegram(row)}
+      >
+        <Copy />
+        Копіювати для Telegram
+      </button>
+    </article>
+  );
+}, ledgerEntryPropsAreEqual);
+
+const LedgerTableRow = memo(function LedgerTableRow({
+  row,
+  displayCurrency,
+  rates,
+  isAdmin,
+  onEdit,
+  onDelete,
+  onStatus,
+  onCopyTelegram,
+}: LedgerEntryProps) {
+  const net = formatMoney(
+    convertToDisplay(row.breakdown.netPayout, displayCurrency, rates),
+    displayCurrency,
+  );
+  const clientName = row.client_name || row.clientName;
 
   return (
     <TableRow className="border-0">
@@ -497,13 +512,14 @@ const LedgerTableRow = memo(function LedgerTableRow({
           onEdit={onEdit}
           onDelete={onDelete}
           onStatus={onStatus}
+          onCopyTelegram={onCopyTelegram}
         />
       </TableCell>
     </TableRow>
   );
-}, ledgerTableRowPropsAreEqual);
+}, ledgerEntryPropsAreEqual);
 
-function LedgerPager({
+function LedgerFooter({
   label,
   pageSize,
   currentPage,
@@ -521,7 +537,7 @@ function LedgerPager({
   onNext: () => void;
 }) {
   return (
-    <div className="flex flex-col gap-2 print:hidden sm:flex-row sm:items-center sm:justify-between">
+    <div className="mt-3 flex flex-col gap-3 border-t border-border/40 px-4 py-3 print:hidden sm:flex-row sm:items-center sm:justify-between">
       <p className="text-xs text-muted-foreground" aria-live="polite">
         {label}
       </p>
@@ -533,11 +549,9 @@ function LedgerPager({
             if (isPageSize(value)) onPageSize(value);
           }}
         >
-          <SelectTrigger aria-label="Кількість записів на сторінці" className="h-11 w-[7.5rem] md:h-8">
+          <SelectTrigger aria-label="Кількість записів на сторінці" className="h-8 w-[4.75rem] px-2 text-xs">
             <SelectValue>
-              {(value: string | null) =>
-                value === "10" || !value ? "10 записів" : isPageSize(value) ? PAGE_SIZE_ITEMS[value] : "10 записів"
-              }
+              {(value: string | null) => (value && isPageSize(value) ? PAGE_SIZE_ITEMS[value] : "10")}
             </SelectValue>
           </SelectTrigger>
           <SelectContent alignItemWithTrigger={false}>
@@ -552,22 +566,26 @@ function LedgerPager({
           type="button"
           variant="outline"
           size="sm"
+          className="h-8 w-8 px-0"
+          aria-label="Попередня сторінка"
           onClick={onPrevious}
           disabled={currentPage <= 1}
         >
-          Попередня
+          <ChevronLeft />
         </Button>
-        <span className="min-w-12 text-center text-xs tabular-nums text-muted-foreground">
-          {currentPage} / {pageCount}
+        <span className="text-xs tabular-nums text-muted-foreground">
+          Сторінка {currentPage} з {pageCount}
         </span>
         <Button
           type="button"
           variant="outline"
           size="sm"
+          className="h-8 w-8 px-0"
+          aria-label="Наступна сторінка"
           onClick={onNext}
           disabled={currentPage >= pageCount}
         >
-          Наступна
+          <ChevronRight />
         </Button>
       </div>
     </div>
@@ -631,9 +649,32 @@ export const LedgerTable = memo(function LedgerTable({ onEdit }: LedgerTableProp
     [updateTransaction],
   );
 
+  const handleEdit = useCallback(
+    (transaction: Transaction) => {
+      onEdit(transaction);
+    },
+    [onEdit],
+  );
+
+  const handleDelete = useCallback((transaction: Transaction) => {
+    setPendingDelete(transaction);
+  }, []);
+
+  const handleCopyTelegram = useCallback((row: TransactionView) => {
+    void copyTransactionForTelegram(row);
+  }, []);
+
   const handlePageSize = useCallback((size: PageSize) => {
     setPageSize(size);
     setPage(1);
+  }, []);
+
+  const handlePrevious = useCallback(() => {
+    setPage((current) => Math.max(1, Math.min(current, pageCount) - 1));
+  }, [pageCount]);
+
+  const handleNext = useCallback(() => {
+    setPage((current) => current + 1);
   }, []);
 
   if (!hydrated) {
@@ -652,28 +693,21 @@ export const LedgerTable = memo(function LedgerTable({ onEdit }: LedgerTableProp
     displayCurrency,
     rates,
     isAdmin,
-    onEdit,
-    onDelete: setPendingDelete,
+    onEdit: handleEdit,
+    onDelete: handleDelete,
     onStatus: handleStatus,
+    onCopyTelegram: handleCopyTelegram,
   };
+  const showFooter = total > 10;
 
   return (
     <>
-      <LedgerPager
-        label={label}
-        pageSize={pageSize}
-        currentPage={pageSize === "all" ? 1 : currentPage}
-        pageCount={pageCount}
-        onPageSize={handlePageSize}
-        onPrevious={() => setPage(currentPage - 1)}
-        onNext={() => setPage(currentPage + 1)}
-      />
-      <div className="mt-3 grid grid-cols-1 gap-3 md:hidden">
+      <div className="grid grid-cols-1 gap-3 md:hidden">
         {visibleRows.map((row) => (
-          <LedgerTableRow key={row.id} layout="card" row={row} {...rowProps} />
+          <LedgerCard key={row.id} row={row} {...rowProps} />
         ))}
       </div>
-      <div className="mt-3 hidden md:block">
+      <div className="hidden md:block">
         <Table
           containerClassName="overflow-x-hidden"
           className="w-full table-fixed border-collapse text-xs"
@@ -698,11 +732,22 @@ export const LedgerTable = memo(function LedgerTable({ onEdit }: LedgerTableProp
           </TableHeader>
           <TableBody className="divide-y divide-slate-100 dark:divide-slate-800">
             {visibleRows.map((row) => (
-              <LedgerTableRow key={row.id} layout="table" row={row} {...rowProps} />
+              <LedgerTableRow key={row.id} row={row} {...rowProps} />
             ))}
           </TableBody>
         </Table>
       </div>
+      {showFooter ? (
+        <LedgerFooter
+          label={label}
+          pageSize={pageSize}
+          currentPage={pageSize === "all" ? 1 : currentPage}
+          pageCount={pageCount}
+          onPageSize={handlePageSize}
+          onPrevious={handlePrevious}
+          onNext={handleNext}
+        />
+      ) : null}
       <AlertDialog
         open={Boolean(pendingDelete)}
         onOpenChange={(open) => {
