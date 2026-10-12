@@ -1,13 +1,14 @@
 import { timingSafeEqual } from "node:crypto";
+import { createClient } from "@supabase/supabase-js";
 import { NextResponse } from "next/server";
 import { LAST_RESORT_RATES } from "@/lib/exchange-rates";
-import { createServiceRoleClient, getServiceRoleKey } from "@/lib/supabase/admin";
-import { isSupabaseConfigured } from "@/lib/supabase/env";
+import { isSupabaseConfigured, normalizeSupabaseUrl } from "@/lib/supabase/env";
 import {
   buildWidgetSummary,
   transactionFromWidgetRow,
   type WidgetSummary,
 } from "@/lib/widget-summary";
+import type { Database } from "@/types/database";
 import type { Transaction } from "@/types/finance";
 
 export const dynamic = "force-dynamic";
@@ -38,13 +39,25 @@ function tokensMatch(provided: string, expected: string): boolean {
   return timingSafeEqual(left, right);
 }
 
-function hasServiceRoleKey(): boolean {
-  const configured = (process.env.SUPABASE_SERVICE_ROLE_KEY ?? "").trim();
-  return Boolean(configured) && Boolean(getServiceRoleKey());
+function serviceRoleKey(): string {
+  return (process.env.SUPABASE_SERVICE_ROLE_KEY ?? "").trim();
+}
+
+function jwtRole(key: string): string | null {
+  const parts = key.split(".");
+  if (parts.length < 3 || !parts[1]) return null;
+  try {
+    const payload = JSON.parse(Buffer.from(parts[1], "base64url").toString("utf8")) as {
+      role?: unknown;
+    };
+    return typeof payload.role === "string" ? payload.role : null;
+  } catch {
+    return null;
+  }
 }
 
 function logMissingWidgetConfig(): void {
-  if (!hasServiceRoleKey()) {
+  if (!serviceRoleKey()) {
     console.error(
       "[widget/summary] SUPABASE_SERVICE_ROLE_KEY is missing. Refusing to read projects and returning 503.",
     );
@@ -56,12 +69,37 @@ function logMissingWidgetConfig(): void {
   }
 }
 
+function createWidgetAdminClient() {
+  const supabaseUrl = normalizeSupabaseUrl(process.env.NEXT_PUBLIC_SUPABASE_URL ?? "");
+  const key = serviceRoleKey();
+  const role = jwtRole(key);
+  if (role && role !== "service_role") {
+    console.error(
+      `[widget/summary] SUPABASE_SERVICE_ROLE_KEY is a ${role} credential. The widget query requires the service_role key.`,
+    );
+    return null;
+  }
+
+  return createClient<Database>(supabaseUrl, key, {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false,
+      detectSessionInUrl: false,
+    },
+    global: {
+      headers: {
+        Authorization: `Bearer ${key}`,
+      },
+    },
+  });
+}
+
 export async function GET(request: Request) {
   if (!tokensMatch(providedToken(request), expectedToken())) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  if (!isSupabaseConfigured() || !hasServiceRoleKey()) {
+  if (!isSupabaseConfigured() || !serviceRoleKey()) {
     logMissingWidgetConfig();
     return NextResponse.json(
       { error: "Widget data source is not configured." },
@@ -69,9 +107,16 @@ export async function GET(request: Request) {
     );
   }
 
+  const supabaseAdmin = createWidgetAdminClient();
+  if (!supabaseAdmin) {
+    return NextResponse.json(
+      { error: "Widget data source is not configured." },
+      { status: 503 },
+    );
+  }
+
   try {
-    const supabase = createServiceRoleClient();
-    const { data, error } = await supabase.from("projects").select("*");
+    const { data, error } = await supabaseAdmin.from("projects").select("*");
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 502 });
     }
