@@ -5,7 +5,7 @@ import { LAST_RESORT_RATES, normalizeEurRates } from "@/lib/exchange-rates";
 import { isSupabaseConfigured, normalizeSupabaseUrl } from "@/lib/supabase/env";
 import {
   buildWidgetSummary,
-  resolveWidgetPeriod,
+  resolveWidgetView,
   transactionFromWidgetRow,
   type WidgetSummary,
 } from "@/lib/widget-summary";
@@ -143,9 +143,13 @@ export async function GET(request: Request) {
     const transactions = (data ?? [])
       .map((row) => transactionFromWidgetRow(row as unknown as Record<string, unknown>))
       .filter((row): row is Transaction => row !== null);
-    const period = resolveWidgetPeriod(new URL(request.url).searchParams.get("period"));
+    const url = new URL(request.url);
+    const view = resolveWidgetView({
+      view: url.searchParams.get("view"),
+      period: url.searchParams.get("period"),
+    });
     const rates = await loadWidgetRates();
-    const summary: WidgetSummary = buildWidgetSummary(transactions, rates, new Date(), period);
+    const summary: WidgetSummary = buildWidgetSummary(transactions, rates, new Date(), view);
 
     return NextResponse.json(summary, {
       headers: { "Cache-Control": "no-store" },

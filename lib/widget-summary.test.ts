@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { summarize, toDisplayTotals, withBreakdowns } from "@/lib/aggregates";
 import { LAST_RESORT_RATES } from "@/lib/exchange-rates";
-import { buildWidgetSummary, transactionFromWidgetRow } from "@/lib/widget-summary";
-import { DEFAULT_FILTERS, type Transaction } from "@/types/finance";
+import { buildWidgetSummary, resolveWidgetView, transactionFromWidgetRow } from "@/lib/widget-summary";
+import type { Transaction } from "@/types/finance";
 
 const now = new Date("2026-10-11T20:00:00.000Z");
 
@@ -55,11 +55,12 @@ describe("buildWidgetSummary", () => {
     }),
   ];
 
-  it("matches the dashboard overview for the default period and ignores stored UAH snapshots", () => {
+  it("defaults to the unpaid pipeline and ignores stored UAH snapshots", () => {
     const summary = buildWidgetSummary(rows, LAST_RESORT_RATES, now);
-    const expected = dashboardUah(rows);
+    const unpaid = rows.filter((row) => row.status === "In Progress" || row.status === "Pending");
+    const expected = dashboardUah(unpaid);
 
-    expect(summary.periodLabel).toBe("Всі періоди");
+    expect(summary.periodLabel).toBe("До виплати");
     expect(summary.netEur).toBe(expected.totals.netPayout);
     expect(summary.grossEur).toBe(expected.totals.grossInBase);
     expect(summary.netUah).toBe(expected.display.netPayout);
@@ -69,10 +70,10 @@ describe("buildWidgetSummary", () => {
     expect(summary.netUah).not.toBe(1);
     expect(summary.activeCount).toBe(2);
     expect(summary.pendingCount).toBe(1);
-    expect(summary.paidCount).toBe(1);
+    expect(summary.paidCount).toBe(0);
   });
 
-  it("limits period=month to the current ledger month", () => {
+  it("limits view=month to the current ledger month", () => {
     const summary = buildWidgetSummary(rows, LAST_RESORT_RATES, now, "month");
     const october = rows.filter((row) => row.date.startsWith("2026-10"));
     const expected = dashboardUah(october);
@@ -85,11 +86,10 @@ describe("buildWidgetSummary", () => {
     expect(summary.paidCount).toBe(1);
   });
 
-  it("keeps period=all aligned with the unfiltered dashboard", () => {
-    const summary = buildWidgetSummary(rows, LAST_RESORT_RATES, now, "all");
-    expect(summary.periodLabel).toBe("Всі періоди");
-    expect(summary.netEur).toBe(dashboardUah(rows).totals.netPayout);
-    expect(DEFAULT_FILTERS.month).toBe("all");
+  it("treats period=month as the month view when view is omitted", () => {
+    expect(resolveWidgetView({ view: null, period: "month" })).toBe("month");
+    expect(resolveWidgetView({ view: null, period: "current" })).toBe("unpaid");
+    expect(resolveWidgetView({ view: "unpaid", period: "all" })).toBe("unpaid");
   });
 });
 

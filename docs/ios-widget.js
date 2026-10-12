@@ -67,7 +67,7 @@ function isSummary(value) {
 }
 
 async function loadSummary() {
-  const request = new Request(API_URL + "?period=current&token=" + encodeURIComponent(TOKEN));
+  const request = new Request(API_URL + "?view=unpaid&token=" + encodeURIComponent(TOKEN));
   request.headers = {
     Accept: "application/json",
     "x-widget-token": TOKEN,

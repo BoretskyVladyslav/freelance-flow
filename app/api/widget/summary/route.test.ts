@@ -129,7 +129,7 @@ describe("widget summary route", () => {
         "updatedAt",
       ].sort(),
     );
-    expect(body.periodLabel).toBe("Всі періоди");
+    expect(body.periodLabel).toBe("До виплати");
     expect(body.activeCount).toBe(0);
     expect(body.pendingCount).toBe(0);
     expect(body.paidCount).toBe(0);

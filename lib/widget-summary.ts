@@ -6,11 +6,10 @@ import {
   DEFAULT_FILTERS,
   isTransaction,
   type ExchangeRates,
-  type LedgerFilters,
   type Transaction,
 } from "@/types/finance";
 
-export type WidgetPeriod = "current" | "month" | "all";
+export type WidgetView = "unpaid" | "month";
 
 export type WidgetSummary = {
   updatedAt: string;
@@ -92,9 +91,14 @@ export function transactionFromWidgetRow(row: Record<string, unknown>): Transact
   return isTransaction(candidate) ? candidate : null;
 }
 
-export function resolveWidgetPeriod(value: string | null | undefined): WidgetPeriod {
-  if (value === "month" || value === "all" || value === "current") return value;
-  return "current";
+export function resolveWidgetView(input: {
+  view?: string | null;
+  period?: string | null;
+}): WidgetView {
+  const view = input.view?.trim();
+  if (view === "month" || view === "unpaid") return view;
+  if (input.period === "month") return "month";
+  return "unpaid";
 }
 
 export function widgetMonthKey(now = new Date()): string {
@@ -108,39 +112,34 @@ export function widgetMonthKey(now = new Date()): string {
   return `${year}-${month}`;
 }
 
-function periodFilters(period: WidgetPeriod, now: Date): { filters: LedgerFilters; label: string } {
-  if (period === "month") {
-    const month = widgetMonthKey(now);
-    return {
-      filters: { ...DEFAULT_FILTERS, month },
-      label: formatMonthFilterLabel(month),
-    };
-  }
-  return { filters: DEFAULT_FILTERS, label: "Всі періоди" };
-}
-
 export function buildWidgetSummary(
   transactions: Transaction[],
   rates: ExchangeRates = LAST_RESORT_RATES,
   now = new Date(),
-  period: WidgetPeriod = "current",
+  view: WidgetView = "unpaid",
 ): WidgetSummary {
-  const { filters, label } = periodFilters(period, now);
-  const views = applyFilters(withBreakdowns(transactions, rates), filters);
-  const totals = summarize(views);
+  const month = widgetMonthKey(now);
+  const selected =
+    view === "month"
+      ? applyFilters(withBreakdowns(transactions, rates), { ...DEFAULT_FILTERS, month })
+      : withBreakdowns(
+          transactions.filter((row) => row.status === "In Progress" || row.status === "Pending"),
+          rates,
+        );
+  const totals = summarize(selected);
   const display = toDisplayTotals(totals, "UAH", rates);
 
   return {
     updatedAt: now.toISOString(),
-    periodLabel: label,
+    periodLabel: view === "month" ? formatMonthFilterLabel(month) : "До виплати",
     netUah: display.netPayout,
     netEur: totals.netPayout,
     grossUah: display.grossInBase,
     grossEur: totals.grossInBase,
     firmFeeUah: display.companyTax,
     taxesUah: display.spainTax,
-    activeCount: views.filter((row) => row.status === "In Progress").length,
-    pendingCount: views.filter((row) => row.status === "Pending").length,
-    paidCount: views.filter((row) => row.status === "Paid").length,
+    activeCount: selected.filter((row) => row.status === "In Progress").length,
+    pendingCount: selected.filter((row) => row.status === "Pending").length,
+    paidCount: selected.filter((row) => row.status === "Paid").length,
   };
 }
