@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
+import { summarize, toDisplayTotals, withBreakdowns } from "@/lib/aggregates";
 import { LAST_RESORT_RATES } from "@/lib/exchange-rates";
 import { buildWidgetSummary, transactionFromWidgetRow } from "@/lib/widget-summary";
-import type { Transaction } from "@/types/finance";
+import { DEFAULT_FILTERS, type Transaction } from "@/types/finance";
 
 const now = new Date("2026-10-11T20:00:00.000Z");
 
@@ -15,47 +16,80 @@ function project(patch: Partial<Transaction> & Pick<Transaction, "id" | "status"
     exchangeRateAtCreation: 1,
     startDate: patch.date,
     weekNumber: 41,
+    tax_model: "fop_3",
     ...patch,
   };
 }
 
-describe("buildWidgetSummary", () => {
-  it("sums the current month and counts pending or in-progress projects", () => {
-    const summary = buildWidgetSummary(
-      [
-        project({
-          id: "pending",
-          status: "Pending",
-          date: "2026-10-02",
-          tax_model: "fop_3",
-          gross_uah: 4500,
-          net_uah: 2550,
-        }),
-        project({
-          id: "paid",
-          status: "Paid",
-          date: "2026-10-05",
-          tax_model: "fop_3",
-          gross_uah: 1000,
-          net_uah: 600,
-        }),
-        project({
-          id: "old",
-          status: "In Progress",
-          date: "2026-08-01",
-          gross_uah: 99999,
-          net_uah: 99999,
-        }),
-      ],
-      LAST_RESORT_RATES,
-      now,
-    );
+function dashboardUah(rows: Transaction[]) {
+  const views = withBreakdowns(rows, LAST_RESORT_RATES);
+  const totals = summarize(views);
+  const display = toDisplayTotals(totals, "UAH", LAST_RESORT_RATES);
+  return { totals, display };
+}
 
-    expect(summary.updatedAt).toBe("2026-10-11T20:00:00.000Z");
-    expect(summary.grossUah).toBe(5500);
-    expect(summary.netUah).toBe(3150);
-    expect(summary.netEur).toBe(131.6);
-    expect(summary.activeProjects).toBe(1);
+describe("buildWidgetSummary", () => {
+  const rows = [
+    project({
+      id: "pending",
+      status: "Pending",
+      date: "2026-10-02",
+      net_uah: 1,
+      gross_uah: 1,
+    }),
+    project({
+      id: "progress",
+      status: "In Progress",
+      date: "2026-10-05",
+    }),
+    project({
+      id: "paid",
+      status: "Paid",
+      date: "2026-10-08",
+    }),
+    project({
+      id: "carry",
+      status: "In Progress",
+      date: "2026-08-01",
+      net_uah: 99999,
+    }),
+  ];
+
+  it("matches the dashboard overview for the default period and ignores stored UAH snapshots", () => {
+    const summary = buildWidgetSummary(rows, LAST_RESORT_RATES, now);
+    const expected = dashboardUah(rows);
+
+    expect(summary.periodLabel).toBe("Всі періоди");
+    expect(summary.netEur).toBe(expected.totals.netPayout);
+    expect(summary.grossEur).toBe(expected.totals.grossInBase);
+    expect(summary.netUah).toBe(expected.display.netPayout);
+    expect(summary.grossUah).toBe(expected.display.grossInBase);
+    expect(summary.firmFeeUah).toBe(expected.display.companyTax);
+    expect(summary.taxesUah).toBe(expected.display.spainTax);
+    expect(summary.netUah).not.toBe(1);
+    expect(summary.activeCount).toBe(2);
+    expect(summary.pendingCount).toBe(1);
+    expect(summary.paidCount).toBe(1);
+  });
+
+  it("limits period=month to the current ledger month", () => {
+    const summary = buildWidgetSummary(rows, LAST_RESORT_RATES, now, "month");
+    const october = rows.filter((row) => row.date.startsWith("2026-10"));
+    const expected = dashboardUah(october);
+
+    expect(summary.periodLabel).toBe("Жовтень 2026");
+    expect(summary.netUah).toBe(expected.display.netPayout);
+    expect(summary.netEur).toBe(expected.totals.netPayout);
+    expect(summary.activeCount).toBe(1);
+    expect(summary.pendingCount).toBe(1);
+    expect(summary.paidCount).toBe(1);
+  });
+
+  it("keeps period=all aligned with the unfiltered dashboard", () => {
+    const summary = buildWidgetSummary(rows, LAST_RESORT_RATES, now, "all");
+    expect(summary.periodLabel).toBe("Всі періоди");
+    expect(summary.netEur).toBe(dashboardUah(rows).totals.netPayout);
+    expect(DEFAULT_FILTERS.month).toBe("all");
   });
 });
 

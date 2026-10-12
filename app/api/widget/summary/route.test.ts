@@ -47,6 +47,7 @@ describe("widget summary route", () => {
     previous.clear();
     errorSpy?.mockRestore();
     errorSpy = null;
+    vi.unstubAllGlobals();
     createClientMock.mockClear();
     fromMock.mockClear();
     selectMock.mockClear();
@@ -72,7 +73,7 @@ describe("widget summary route", () => {
       error: "Widget data source is not configured.",
     });
     expect(
-      errorSpy.mock.calls.some((call) => String(call[0]).includes("SUPABASE_SERVICE_ROLE_KEY is missing")),
+      errorSpy.mock.calls.some((call: unknown[]) => String(call[0]).includes("SUPABASE_SERVICE_ROLE_KEY is missing")),
     ).toBe(true);
     expect(createClientMock).not.toHaveBeenCalled();
   });
@@ -91,7 +92,7 @@ describe("widget summary route", () => {
     expect(response.status).toBe(503);
     expect(createClientMock).not.toHaveBeenCalled();
     expect(
-      errorSpy.mock.calls.some((call) => String(call[0]).includes("anon credential")),
+      errorSpy.mock.calls.some((call: unknown[]) => String(call[0]).includes("anon credential")),
     ).toBe(true);
   });
 
@@ -100,6 +101,12 @@ describe("widget summary route", () => {
     process.env.SUPABASE_SERVICE_ROLE_KEY = jwt("service_role");
     process.env.NEXT_PUBLIC_SUPABASE_URL = "https://example.supabase.co";
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = "test-anon-key";
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => {
+        throw new Error("offline");
+      }),
+    );
 
     const response = await GET(
       new Request("http://localhost/api/widget/summary?token=flow-widget-token-2026"),
@@ -108,12 +115,30 @@ describe("widget summary route", () => {
     expect(response.headers.get("cache-control")).toBe("no-store");
     const body = await response.json();
     expect(Object.keys(body).sort()).toEqual(
-      ["activeProjects", "grossUah", "netEur", "netUah", "updatedAt"].sort(),
+      [
+        "activeCount",
+        "firmFeeUah",
+        "grossEur",
+        "grossUah",
+        "netEur",
+        "netUah",
+        "paidCount",
+        "pendingCount",
+        "periodLabel",
+        "taxesUah",
+        "updatedAt",
+      ].sort(),
     );
-    expect(body.activeProjects).toBe(0);
+    expect(body.periodLabel).toBe("Всі періоди");
+    expect(body.activeCount).toBe(0);
+    expect(body.pendingCount).toBe(0);
+    expect(body.paidCount).toBe(0);
     expect(body.netUah).toBe(0);
     expect(body.netEur).toBe(0);
     expect(body.grossUah).toBe(0);
+    expect(body.grossEur).toBe(0);
+    expect(body.firmFeeUah).toBe(0);
+    expect(body.taxesUah).toBe(0);
     expect(body.updatedAt).toEqual(expect.any(String));
 
     const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;

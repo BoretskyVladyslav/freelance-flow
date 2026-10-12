@@ -1,15 +1,16 @@
 import { timingSafeEqual } from "node:crypto";
 import { createClient } from "@supabase/supabase-js";
 import { NextResponse } from "next/server";
-import { LAST_RESORT_RATES } from "@/lib/exchange-rates";
+import { LAST_RESORT_RATES, normalizeEurRates } from "@/lib/exchange-rates";
 import { isSupabaseConfigured, normalizeSupabaseUrl } from "@/lib/supabase/env";
 import {
   buildWidgetSummary,
+  resolveWidgetPeriod,
   transactionFromWidgetRow,
   type WidgetSummary,
 } from "@/lib/widget-summary";
 import type { Database } from "@/types/database";
-import type { Transaction } from "@/types/finance";
+import type { ExchangeRates, Transaction } from "@/types/finance";
 
 export const dynamic = "force-dynamic";
 
@@ -69,6 +70,24 @@ function logMissingWidgetConfig(): void {
   }
 }
 
+async function loadWidgetRates(): Promise<ExchangeRates> {
+  try {
+    const response = await fetch("https://open.er-api.com/v6/latest/EUR", {
+      cache: "no-store",
+      signal: AbortSignal.timeout(8000),
+      headers: { Accept: "application/json" },
+    });
+    if (!response.ok) return LAST_RESORT_RATES;
+    return normalizeEurRates((await response.json()) as Parameters<typeof normalizeEurRates>[0]);
+  } catch (error) {
+    console.error(
+      "[widget/summary] Live exchange rates are unavailable. Using the last-resort EUR table.",
+      error instanceof Error ? error.message : "",
+    );
+    return LAST_RESORT_RATES;
+  }
+}
+
 function createWidgetAdminClient() {
   const supabaseUrl = normalizeSupabaseUrl(process.env.NEXT_PUBLIC_SUPABASE_URL ?? "");
   const key = serviceRoleKey();
@@ -124,7 +143,9 @@ export async function GET(request: Request) {
     const transactions = (data ?? [])
       .map((row) => transactionFromWidgetRow(row as unknown as Record<string, unknown>))
       .filter((row): row is Transaction => row !== null);
-    const summary: WidgetSummary = buildWidgetSummary(transactions, LAST_RESORT_RATES, new Date());
+    const period = resolveWidgetPeriod(new URL(request.url).searchParams.get("period"));
+    const rates = await loadWidgetRates();
+    const summary: WidgetSummary = buildWidgetSummary(transactions, rates, new Date(), period);
 
     return NextResponse.json(summary, {
       headers: { "Cache-Control": "no-store" },
