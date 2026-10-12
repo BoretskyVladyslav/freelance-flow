@@ -36,7 +36,12 @@ function readCache() {
     const path = cachePath();
     if (!files.fileExists(path)) return null;
     const parsed = JSON.parse(files.readString(path));
-    if (!parsed || typeof parsed.netUah !== "number") return null;
+    if (!parsed) {
+      return null;
+    }
+    if ((typeof parsed.netUah) !== "number") {
+      return null;
+    }
     return parsed;
   } catch (error) {
     return null;
@@ -52,7 +57,13 @@ function writeCache(summary) {
 }
 
 function isSummary(value) {
-  return Boolean(value && typeof value.netUah === "number" && typeof value.netEur === "number");
+  if (!value) {
+    return false;
+  }
+  if ((typeof value.netUah) !== "number") {
+    return false;
+  }
+  return (typeof value.netEur) === "number";
 }
 
 async function loadSummary() {
