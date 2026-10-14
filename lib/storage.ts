@@ -16,6 +16,7 @@ const KEYS = {
   rates: "freelance-flow/rates",
   displayCurrency: "freelance-flow/display-currency",
   schemaVersion: "freelance-flow/schema-version",
+  fxSettings: "freelance-flow/fx-settings",
 } as const;
 
 export type FinanceSnapshot = {
@@ -182,6 +183,14 @@ export async function loadSnapshot(): Promise<FinanceSnapshot> {
   }
 
   return snapshot;
+}
+
+export async function loadStoredFxSettings(): Promise<unknown> {
+  return readValue<unknown>(KEYS.fxSettings);
+}
+
+export async function saveStoredFxSettings(value: unknown): Promise<void> {
+  await writeValue(KEYS.fxSettings, value);
 }
 
 export async function savePreferences(prefs: {

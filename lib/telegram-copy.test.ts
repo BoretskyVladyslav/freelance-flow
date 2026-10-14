@@ -53,6 +53,15 @@ const inProgress: Transaction = {
 };
 
 describe("formatTransactionTelegram", () => {
+  it("shows the euro approximation from the locked Stripe rate", () => {
+    const [view] = withBreakdowns(
+      [{ ...usd, customFee: 0, exchangeRateAtCreation: 0.9016 }],
+      LAST_RESORT_RATES,
+    );
+
+    expect(formatTransactionTelegram(view)).toContain("1 000,00 USD (≈ 901,60 €)");
+  });
+
   it("formats a USD project in original currency with client", () => {
     const [view] = withBreakdowns([usd], LAST_RESORT_RATES);
     const text = formatTransactionTelegram(view);

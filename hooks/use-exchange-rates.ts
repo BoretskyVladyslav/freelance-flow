@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { LAST_RESORT_RATES } from "@/lib/exchange-rates";
+import { DEFAULT_STRIPE_FX_SPREAD_PERCENT, LAST_RESORT_RATES } from "@/lib/exchange-rates";
 import { isExchangeRates, type ExchangeRates } from "@/types/finance";
 
 type ExchangeRateState = {
@@ -11,7 +11,11 @@ type ExchangeRateState = {
   refreshing: boolean;
 };
 
-export function useExchangeRates(persistedRates: ExchangeRates | null) {
+export function useExchangeRates(
+  persistedRates: ExchangeRates | null,
+  spreadPercent = DEFAULT_STRIPE_FX_SPREAD_PERCENT,
+  enabled = true,
+) {
   const fallback = persistedRates ?? LAST_RESORT_RATES;
   const [state, setState] = useState<ExchangeRateState>({
     rates: { ...fallback, stale: true },
@@ -29,10 +33,12 @@ export function useExchangeRates(persistedRates: ExchangeRates | null) {
     }));
 
     try {
-      const response = await fetch(
-        refresh ? "/api/exchange-rates?refresh=1" : "/api/exchange-rates",
-        { cache: refresh ? "no-store" : "default" },
-      );
+      const params = new URLSearchParams();
+      params.set("spread", String(spreadPercent));
+      if (refresh) params.set("refresh", "1");
+      const response = await fetch(`/api/exchange-rates?${params.toString()}`, {
+        cache: refresh ? "no-store" : "default",
+      });
       const payload = (await response.json()) as unknown;
       if (!response.ok || !isExchangeRates(payload)) {
         const message =
@@ -60,11 +66,12 @@ export function useExchangeRates(persistedRates: ExchangeRates | null) {
       }));
       return null;
     }
-  }, []);
+  }, [spreadPercent]);
 
   useEffect(() => {
+    if (!enabled) return;
     void fetchRates(false);
-  }, [fetchRates]);
+  }, [enabled, fetchRates]);
 
   useEffect(() => {
     if (!persistedRates) return;

@@ -257,3 +257,65 @@ create policy "projects_delete_admin_only"
   to authenticated
   using (public.is_admin());
 
+-- Shared Stripe FX override. One row so both partners and the iOS widget use the same rate.
+create table if not exists public.fx_settings (
+  id text primary key,
+  mode text not null default 'stripe_auto',
+  spread_percent numeric(8, 4) not null default -2,
+  updated_at timestamptz not null default now()
+);
+
+alter table public.fx_settings
+  add column if not exists eur_uah numeric(18, 8);
+
+alter table public.fx_settings
+  add column if not exists usd_eur numeric(18, 8);
+
+alter table public.fx_settings
+  add column if not exists spread_percent numeric(8, 4) not null default -2;
+
+do $$
+begin
+  if not exists (
+    select 1 from pg_constraint where conname = 'fx_settings_mode_check'
+  ) then
+    alter table public.fx_settings
+      add constraint fx_settings_mode_check
+      check (mode in ('stripe_auto', 'manual'));
+  end if;
+end
+$$;
+
+insert into public.fx_settings (id)
+values ('default')
+on conflict (id) do nothing;
+
+drop trigger if exists fx_settings_set_updated_at on public.fx_settings;
+create trigger fx_settings_set_updated_at
+  before update on public.fx_settings
+  for each row execute function public.set_updated_at();
+
+alter table public.fx_settings enable row level security;
+
+drop policy if exists "fx_settings_select_authenticated" on public.fx_settings;
+create policy "fx_settings_select_authenticated"
+  on public.fx_settings
+  for select
+  to authenticated
+  using (true);
+
+drop policy if exists "fx_settings_insert_admin" on public.fx_settings;
+create policy "fx_settings_insert_admin"
+  on public.fx_settings
+  for insert
+  to authenticated
+  with check (public.is_admin());
+
+drop policy if exists "fx_settings_update_admin" on public.fx_settings;
+create policy "fx_settings_update_admin"
+  on public.fx_settings
+  for update
+  to authenticated
+  using (public.is_admin())
+  with check (public.is_admin());
+

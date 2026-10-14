@@ -17,6 +17,7 @@ import { TeamPanel } from "@/components/team/team-panel";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { StripeRateBadge } from "@/components/finance/stripe-rate-badge";
 import { uahPerUnit } from "@/lib/exchange-rates";
 import { formatDate, formatRate } from "@/lib/format";
 import { formatEmployeePeriodTelegram } from "@/lib/telegram-copy";
@@ -166,19 +167,23 @@ export function Dashboard() {
 
       <CloudMigrationBanner />
 
-      <p className="min-w-0 text-xs text-muted-foreground print:hidden" role="status">
-        {mounted ? (
-          <>
-            Курс оновлено {formatDate(rates.fetchedAt)} · 1 USD ={" "}
-            {formatRate(uahPerUnit("USD", rates))} UAH · 1 EUR ={" "}
-            {formatRate(uahPerUnit("EUR", rates))} UAH
-            {rates.stale ? " · використано збережений курс" : ""}
-            {ratesError ? ` · ${ratesError}` : ""}
-          </>
-        ) : (
-          "Курс оновлено —"
-        )}
-      </p>
+      <div className="flex min-w-0 flex-col gap-2 print:hidden sm:flex-row sm:items-center sm:justify-between">
+        <StripeRateBadge />
+        <p className="min-w-0 text-xs text-muted-foreground" role="status">
+          {mounted ? (
+            <>
+              Курс Stripe оновлено {formatDate(rates.fetchedAt)} · 1 USD ={" "}
+              {formatRate(uahPerUnit("USD", rates))} UAH · 1 EUR ={" "}
+              {formatRate(uahPerUnit("EUR", rates))} UAH
+              {rates.stale ? " · використано збережений курс" : ""}
+              {rates.fxMode === "manual" ? " · вручну" : ""}
+              {ratesError ? ` · ${ratesError}` : ""}
+            </>
+          ) : (
+            "Курс Stripe —"
+          )}
+        </p>
+      </div>
 
       <div id="financial-overview" className="flex flex-col gap-4 scroll-mt-4 sm:gap-6">
       {isAdmin && employeeView ? (

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { calculateFinancialBreakdown } from "@/lib/finance";
-import { normalizeEurRates, uahPerUnit } from "@/lib/exchange-rates";
+import { applyStripeSpread, normalizeEurRates, uahPerUnit } from "@/lib/exchange-rates";
 import {
   calculateProjectTaxes,
   calculateTaxSequence,
@@ -289,6 +289,46 @@ describe("exchange rate helpers", () => {
     expect(uahPerUnit("USD", rates)).toBeCloseTo(41.81818182, 5);
     expect(uahPerUnit("EUR", rates)).toBeCloseTo(45.45454545, 5);
     expect(uahPerUnit("UAH", rates)).toBe(1);
+  });
+
+  it("runs Spain and FOP sequences on a Stripe-adjusted USD rate", () => {
+    const stripe = applyStripeSpread(
+      {
+        base: "EUR",
+        fetchedAt: "2026-10-14T00:00:00.000Z",
+        toEur: { EUR: 1, USD: 0.92, UAH: 0.022, PLN: 0.23 },
+      },
+      -2,
+    );
+
+    const spain = calculateFinancialBreakdown({
+      gross: 1000,
+      platformFee: 0,
+      currency: "USD",
+      exchangeRate: stripe.toEur.USD,
+      taxModel: "spain_19",
+    });
+    const fop = calculateFinancialBreakdown({
+      gross: 1000,
+      platformFee: 0,
+      currency: "USD",
+      exchangeRate: stripe.toEur.USD,
+      taxModel: "fop_3",
+    });
+
+    expect(stripe.toEur.USD).toBe(0.9016);
+    expect(spain).toMatchObject({
+      grossInBase: 901.6,
+      spainTax: 171.3,
+      companyTax: 219.09,
+      netPayout: 511.21,
+    });
+    expect(fop).toMatchObject({
+      grossInBase: 901.6,
+      companyTax: 270.48,
+      spainTax: 37.87,
+      netPayout: 593.25,
+    });
   });
 });
 

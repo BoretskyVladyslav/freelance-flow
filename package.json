@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "next lint",
     "test": "vitest run",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "recalc:stripe-fx": "npx --yes tsx scripts/recalculate-stripe-fx.ts"
   },
   "dependencies": {
     "@base-ui/react": "^1.7.0",

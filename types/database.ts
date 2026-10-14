@@ -115,6 +115,33 @@ export type Database = {
         };
         Relationships: [];
       };
+      fx_settings: {
+        Row: {
+          id: string;
+          mode: "stripe_auto" | "manual";
+          spread_percent: number;
+          eur_uah: number | null;
+          usd_eur: number | null;
+          updated_at: string;
+        };
+        Insert: {
+          id: string;
+          mode?: "stripe_auto" | "manual";
+          spread_percent?: number;
+          eur_uah?: number | null;
+          usd_eur?: number | null;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          mode?: "stripe_auto" | "manual";
+          spread_percent?: number;
+          eur_uah?: number | null;
+          usd_eur?: number | null;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
     };
     Views: Record<string, never>;
     Functions: {

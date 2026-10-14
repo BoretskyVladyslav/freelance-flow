@@ -62,11 +62,17 @@ export type TaxBreakdown = {
   currencyGainLoss: number;
 };
 
+export type FxRateSource = "stripe_settlement" | "stripe_spread" | "manual" | "fallback";
+export type FxMode = "stripe_auto" | "manual";
+
 export type ExchangeRates = {
   base: typeof BASE_CURRENCY;
   fetchedAt: string;
   toEur: Record<Currency, number>;
   stale?: boolean;
+  source?: FxRateSource;
+  fxMode?: FxMode;
+  spreadPercent?: number;
 };
 
 export type LedgerFilters = {

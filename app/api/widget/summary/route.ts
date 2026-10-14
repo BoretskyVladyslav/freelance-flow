@@ -1,7 +1,14 @@
 import { timingSafeEqual } from "node:crypto";
 import { createClient } from "@supabase/supabase-js";
 import { NextResponse } from "next/server";
-import { LAST_RESORT_RATES, normalizeEurRates } from "@/lib/exchange-rates";
+import {
+  applyFxSettings,
+  DEFAULT_FX_SETTINGS,
+  fetchStripeAwareRates,
+  LAST_RESORT_RATES,
+  parseFxSettings,
+  type FxSettings,
+} from "@/lib/exchange-rates";
 import { isSupabaseConfigured, normalizeSupabaseUrl } from "@/lib/supabase/env";
 import {
   buildWidgetSummary,
@@ -70,21 +77,43 @@ function logMissingWidgetConfig(): void {
   }
 }
 
-async function loadWidgetRates(): Promise<ExchangeRates> {
+async function loadWidgetFxSettings(
+  supabaseAdmin: NonNullable<ReturnType<typeof createWidgetAdminClient>>,
+): Promise<FxSettings> {
   try {
-    const response = await fetch("https://open.er-api.com/v6/latest/EUR", {
-      cache: "no-store",
-      signal: AbortSignal.timeout(8000),
-      headers: { Accept: "application/json" },
+    const { data, error } = await supabaseAdmin.from("fx_settings").select("*");
+    if (error || !data) return DEFAULT_FX_SETTINGS;
+    const row = data.find((item) => item.id === "default") ?? data[0];
+    if (!row) return DEFAULT_FX_SETTINGS;
+    return parseFxSettings({
+      mode: row.mode,
+      spreadPercent: Number(row.spread_percent),
+      eurUah: row.eur_uah == null ? undefined : Number(row.eur_uah),
+      usdEur: row.usd_eur == null ? undefined : Number(row.usd_eur),
     });
-    if (!response.ok) return LAST_RESORT_RATES;
-    return normalizeEurRates((await response.json()) as Parameters<typeof normalizeEurRates>[0]);
+  } catch (error) {
+    console.error(
+      "[widget/summary] Shared FX settings are unavailable. Using Stripe auto −2%.",
+      error instanceof Error ? error.message : "",
+    );
+    return DEFAULT_FX_SETTINGS;
+  }
+}
+
+async function loadWidgetRates(settings: FxSettings): Promise<ExchangeRates> {
+  try {
+    const auto = await fetchStripeAwareRates({
+      secretKey: process.env.STRIPE_SECRET_KEY,
+      spreadPercent: settings.spreadPercent,
+      cache: "fresh",
+    });
+    return applyFxSettings(auto, settings);
   } catch (error) {
     console.error(
       "[widget/summary] Live exchange rates are unavailable. Using the last-resort EUR table.",
       error instanceof Error ? error.message : "",
     );
-    return LAST_RESORT_RATES;
+    return applyFxSettings({ ...LAST_RESORT_RATES, stale: true }, settings);
   }
 }
 
@@ -148,7 +177,8 @@ export async function GET(request: Request) {
       view: url.searchParams.get("view"),
       period: url.searchParams.get("period"),
     });
-    const rates = await loadWidgetRates();
+    const settings = await loadWidgetFxSettings(supabaseAdmin);
+    const rates = await loadWidgetRates(settings);
     const summary: WidgetSummary = buildWidgetSummary(transactions, rates, new Date(), view);
 
     return NextResponse.json(summary, {

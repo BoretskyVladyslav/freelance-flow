@@ -12,6 +12,15 @@ import {
 import { toast } from "sonner";
 import { useExchangeRates } from "@/hooks/use-exchange-rates";
 import {
+  applyFxSettings,
+  DEFAULT_FX_SETTINGS,
+  parseFxSettings,
+  resolveRate,
+  type FxSettings,
+} from "@/lib/exchange-rates";
+import { recalculateStripeWindow } from "@/lib/stripe-recalc";
+import { loadFxSettings, saveFxSettings as persistFxSettings } from "@/services/fx-settings";
+import {
   applyFilters,
   summarize,
   toDisplayTotals,
@@ -21,7 +30,6 @@ import {
   type TransactionView,
   type WeeklyPoint,
 } from "@/lib/aggregates";
-import { resolveRate } from "@/lib/exchange-rates";
 import {
   projectsRepository,
   type FinanceSnapshot,
@@ -63,6 +71,9 @@ type FinanceContextValue = {
   ratesRefreshing: boolean;
   ratesError: string | null;
   refreshRates: () => Promise<ExchangeRates | null>;
+  fxSettings: FxSettings;
+  saveFxSettings: (settings: FxSettings) => Promise<void>;
+  recalculateRecentStripeRates: () => void;
   totals: DashboardTotals;
   displayTotals: DashboardTotals;
   weekly: WeeklyPoint[];
@@ -101,13 +112,18 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     displayCurrency: "UAH",
   });
   const [filters, setFilters] = useState<LedgerFilters>(DEFAULT_FILTERS);
-  const exchange = useExchangeRates(snapshot.lastKnownRates);
+  const [fxSettings, setFxSettings] = useState<FxSettings>(DEFAULT_FX_SETTINGS);
+  const exchange = useExchangeRates(snapshot.lastKnownRates, fxSettings.spreadPercent, hydrated);
+  const effectiveRates = useMemo(
+    () => applyFxSettings(exchange.rates, fxSettings),
+    [exchange.rates, fxSettings],
+  );
 
   useEffect(() => {
-    void projectsRepository
-      .load()
-      .then((loaded) => {
+    void Promise.all([projectsRepository.load(), loadFxSettings()])
+      .then(([loaded, settings]) => {
         setSnapshot(loaded);
+        setFxSettings(settings);
         setPersistEnabled(true);
         setHydrated(true);
       })
@@ -192,14 +208,25 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
   }, [hydrated, persistEnabled, snapshot]);
 
   useEffect(() => {
-    if (!hydrated || exchange.rates.stale) return;
+    if (!hydrated || effectiveRates.stale) return;
     setSnapshot((current) => {
-      if (current.lastKnownRates?.fetchedAt === exchange.rates.fetchedAt) {
+      const prev = current.lastKnownRates;
+      if (
+        prev &&
+        prev.fetchedAt === effectiveRates.fetchedAt &&
+        prev.fxMode === effectiveRates.fxMode &&
+        prev.source === effectiveRates.source &&
+        prev.spreadPercent === effectiveRates.spreadPercent &&
+        prev.toEur.USD === effectiveRates.toEur.USD &&
+        prev.toEur.UAH === effectiveRates.toEur.UAH &&
+        prev.toEur.EUR === effectiveRates.toEur.EUR &&
+        prev.toEur.PLN === effectiveRates.toEur.PLN
+      ) {
         return current;
       }
-      return { ...current, lastKnownRates: exchange.rates };
+      return { ...current, lastKnownRates: effectiveRates };
     });
-  }, [exchange.rates, hydrated]);
+  }, [effectiveRates, hydrated]);
 
   const isAdmin = role === "admin";
   const setTeamScope = useCallback((scope: TeamScope, label?: string, email?: string) => {
@@ -240,20 +267,20 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
   );
 
   const views = useMemo(
-    () => withBreakdowns(scopedTransactions, exchange.rates),
-    [exchange.rates, scopedTransactions],
+    () => withBreakdowns(scopedTransactions, effectiveRates),
+    [effectiveRates, scopedTransactions],
   );
 
   const weekly = useMemo(
-    () => weeklySeries(views, snapshot.displayCurrency, exchange.rates),
-    [exchange.rates, snapshot.displayCurrency, views],
+    () => weeklySeries(views, snapshot.displayCurrency, effectiveRates),
+    [effectiveRates, snapshot.displayCurrency, views],
   );
 
   const filteredViews = useMemo(() => applyFilters(views, filters), [filters, views]);
   const totals = useMemo(() => summarize(filteredViews), [filteredViews]);
   const displayTotals = useMemo(
-    () => toDisplayTotals(totals, snapshot.displayCurrency, exchange.rates),
-    [exchange.rates, snapshot.displayCurrency, totals],
+    () => toDisplayTotals(totals, snapshot.displayCurrency, effectiveRates),
+    [effectiveRates, snapshot.displayCurrency, totals],
   );
 
   const addTransaction = useCallback(
@@ -263,7 +290,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
       },
     ) => {
       const exchangeRateAtCreation =
-        input.exchangeRateAtCreation ?? resolveRate(input.currency, exchange.rates);
+        input.exchangeRateAtCreation ?? resolveRate(input.currency, effectiveRates);
       const employeeId = isAdmin
         ? input.employeeId ?? (currentUserId || undefined)
         : (currentUserId || undefined);
@@ -282,7 +309,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
         transactions: [next, ...current.transactions],
       }));
     },
-    [currentUserId, exchange.rates, isAdmin],
+    [currentUserId, effectiveRates, isAdmin],
   );
 
   const updateTransaction = useCallback((id: string, patch: Partial<Omit<Transaction, "id">>) => {
@@ -352,6 +379,59 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     toast.success(`Імпортовано транзакцій: ${imported.transactions.length}.`);
   }, []);
 
+  const saveFxSettings = useCallback(async (settings: FxSettings) => {
+    const parsed = parseFxSettings(settings);
+    setFxSettings(parsed);
+    const result = await persistFxSettings(parsed);
+    if (result.warning) {
+      toast.error(`Курс збережено на цьому пристрої. Хмара: ${result.warning}`);
+      return;
+    }
+    toast.success(
+      result.cloud ? "Курс Stripe збережено для всіх пристроїв." : "Курс Stripe збережено.",
+    );
+  }, []);
+
+  const recalculateRecentStripeRates = useCallback(() => {
+    if (effectiveRates.stale && fxSettings.mode !== "manual") {
+      toast.error("Актуальний курс Stripe недоступний. Перерахунок скасовано.");
+      return;
+    }
+    if (
+      typeof window !== "undefined" &&
+      !window.confirm(
+        "Перерахувати курс Stripe для проєктів з 1 серпня по 14 жовтня 2026? Суми в оригінальній валюті не зміняться.",
+      )
+    ) {
+      return;
+    }
+
+    const result = recalculateStripeWindow(snapshot.transactions, effectiveRates);
+    console.info("[stripe-fx] Projects from 2026-08-01 through 2026-10-14");
+    console.table(
+      result.report.map((row) => ({
+        title: row.title,
+        currency: row.currency,
+        start: row.startDate,
+        rateBefore: row.rateBefore,
+        rateAfter: row.rateAfter,
+        netEurBefore: row.netEurBefore,
+        netEurAfter: row.netEurAfter,
+        deltaNetEur: row.deltaNetEur,
+        netUahBefore: row.netUahBefore,
+        netUahAfter: row.netUahAfter,
+        deltaNetUah: row.deltaNetUah,
+        adjusted: row.adjusted,
+      })),
+    );
+    if (result.changedCount === 0) {
+      toast.success("Проєкти з 1 серпня по 14 жовтня вже на курсі Stripe.");
+      return;
+    }
+    setSnapshot((current) => ({ ...current, transactions: result.transactions }));
+    toast.success(`Оновлено проєктів: ${result.changedCount}.`);
+  }, [effectiveRates, fxSettings.mode, snapshot.transactions]);
+
   const value = useMemo<FinanceContextValue>(
     () => ({
       hydrated,
@@ -371,11 +451,14 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
       setFilters,
       displayCurrency: snapshot.displayCurrency,
       setDisplayCurrency,
-      rates: exchange.rates,
+      rates: effectiveRates,
       ratesLoading: exchange.loading,
       ratesRefreshing: exchange.refreshing,
       ratesError: exchange.error,
       refreshRates: exchange.refresh,
+      fxSettings,
+      saveFxSettings,
+      recalculateRecentStripeRates,
       totals,
       displayTotals,
       weekly,
@@ -396,8 +479,11 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
       employeeView,
       exchange.error,
       exchange.loading,
-      exchange.rates,
+      effectiveRates,
       exchange.refresh,
+      fxSettings,
+      recalculateRecentStripeRates,
+      saveFxSettings,
       exchange.refreshing,
       exportBackup,
       filteredViews,

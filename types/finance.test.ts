@@ -4,6 +4,7 @@ import {
   defaultTaxModelForCreator,
   getTaxModel,
   getTransactionStartDate,
+  isExchangeRates,
   parseBackup,
   resolveTaxModel,
   type BackupEnvelope,
@@ -148,6 +149,27 @@ describe("parseBackup", () => {
         transactions: [{ ...validTransaction, startDate: "not-a-date" }],
       }),
     ).toThrow(/index 0/);
+  });
+
+  it("accepts Stripe metadata on exchange rates and still reads legacy backups", () => {
+    expect(
+      isExchangeRates({
+        base: "EUR",
+        fetchedAt: "2026-10-14T00:00:00.000Z",
+        toEur: { EUR: 1, USD: 0.9016, UAH: 0.02156, PLN: 0.2254 },
+        source: "stripe_spread",
+        fxMode: "stripe_auto",
+        spreadPercent: -2,
+      }),
+    ).toBe(true);
+
+    const parsed = parseBackup({
+      version: 1,
+      exportedAt: "2026-08-29T10:00:00.000Z",
+      transactions: [validTransaction],
+    });
+    expect(parsed.transactions).toHaveLength(1);
+    expect(parsed.lastKnownRates).toBeUndefined();
   });
 
   it("rejects invalid lastKnownRates", () => {
