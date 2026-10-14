@@ -19,7 +19,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { StripeRateBadge } from "@/components/finance/stripe-rate-badge";
 import { uahPerUnit } from "@/lib/exchange-rates";
-import { formatDate, formatRate } from "@/lib/format";
+import { formatDate, formatStripeRate } from "@/lib/format";
 import { formatEmployeePeriodTelegram } from "@/lib/telegram-copy";
 import { useMounted } from "@/hooks/use-mounted";
 import type { Transaction } from "@/types/finance";
@@ -173,8 +173,8 @@ export function Dashboard() {
           {mounted ? (
             <>
               Курс Stripe оновлено {formatDate(rates.fetchedAt)} · 1 USD ={" "}
-              {formatRate(uahPerUnit("USD", rates))} UAH · 1 EUR ={" "}
-              {formatRate(uahPerUnit("EUR", rates))} UAH
+              {formatStripeRate(uahPerUnit("USD", rates))} UAH · 1 EUR ={" "}
+              {formatStripeRate(uahPerUnit("EUR", rates))} UAH
               {rates.stale ? " · використано збережений курс" : ""}
               {rates.fxMode === "manual" ? " · вручну" : ""}
               {ratesError ? ` · ${ratesError}` : ""}

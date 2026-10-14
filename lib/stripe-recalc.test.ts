@@ -24,7 +24,7 @@ function project(patch: Partial<Transaction> & Pick<Transaction, "id" | "date">)
 }
 
 describe("Stripe two-month recalculation", () => {
-  const rates = applyStripeSpread(market, -2);
+  const rates = applyStripeSpread(market, 4);
 
   it("includes projects created or started from 1 August through 14 October 2026", () => {
     expect(isInStripeRecalcWindow(project({ id: "july", date: "2026-07-31" }))).toBe(false);
@@ -52,16 +52,16 @@ describe("Stripe two-month recalculation", () => {
 
     expect(result.transactions[0]).toBe(older);
     expect(updated?.grossAmount).toBe(1000);
-    expect(updated?.exchangeRateAtCreation).toBe(0.9016);
+    expect(updated?.exchangeRateAtCreation).toBe(0.88461538);
     expect(updated?.gross_uah).not.toBeUndefined();
     expect(result.changedCount).toBe(1);
     expect(result.report[0]).toMatchObject({
       title: "September",
       currency: "USD",
       rateBefore: 0.92,
-      rateAfter: 0.9016,
+      rateAfter: 0.88461538,
       grossEurBefore: 920,
-      grossEurAfter: 901.6,
+      grossEurAfter: 884.62,
     });
     expect(result.report[0]?.deltaNetEur).toBeLessThan(0);
   });

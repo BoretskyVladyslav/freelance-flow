@@ -90,15 +90,14 @@ export function uahPerUnit(
   return new Decimal(unitToEur).div(uahToEur).toNumber();
 }
 
-/** Stripe's typical effective FX haircut versus a mid-market / commercial base. */
-export const DEFAULT_STRIPE_FX_SPREAD_PERCENT = -2;
+/** Stripe conversion fee added on top of the official mid-market quote. */
+export const DEFAULT_STRIPE_FX_SPREAD_PERCENT = 4;
+const LEGACY_STRIPE_SPREAD_PERCENT = -2;
+const STRIPE_UAH_QUOTE_DECIMALS = 4;
 
 const FRANKFURTER_URL = "https://api.frankfurter.app/latest?from=EUR&to=USD,PLN";
-const MONOBANK_URL = "https://api.monobank.ua/bank/currency";
 const NBU_URL = "https://bank.gov.ua/NBUStatService/v1/statdirectory/exchange?json";
 const ER_API_URL = "https://open.er-api.com/v6/latest/EUR";
-const MONO_EUR = 978;
-const MONO_UAH = 980;
 
 export type FxSettings = {
   mode: FxMode;
@@ -128,7 +127,30 @@ export function sanitizeSpread(value: unknown): number {
   if (!Number.isFinite(parsed) || parsed <= -50 || parsed >= 50) {
     return DEFAULT_STRIPE_FX_SPREAD_PERCENT;
   }
-  return new Decimal(parsed).toDecimalPlaces(4, Decimal.ROUND_HALF_UP).toNumber();
+  const spread = new Decimal(parsed).toDecimalPlaces(4, Decimal.ROUND_HALF_UP).toNumber();
+  return spread === LEGACY_STRIPE_SPREAD_PERCENT ? DEFAULT_STRIPE_FX_SPREAD_PERCENT : spread;
+}
+
+export function stripeFeeFactor(feePercent: number = DEFAULT_STRIPE_FX_SPREAD_PERCENT): Decimal {
+  const factor = new Decimal(1).plus(new Decimal(sanitizeSpread(feePercent)).div(100));
+  if (factor.lte(0)) {
+    throw new Error("Stripe conversion fee must leave a positive rate.");
+  }
+  return factor;
+}
+
+/** Hryvnia per 1 euro on a Stripe invoice: NBU mid-market × (1 + fee). */
+export function stripeUahQuote(baseUahPerUnit: Decimal.Value, feePercent: number = DEFAULT_STRIPE_FX_SPREAD_PERCENT): number {
+  return new Decimal(baseUahPerUnit)
+    .times(stripeFeeFactor(feePercent))
+    .toDecimalPlaces(STRIPE_UAH_QUOTE_DECIMALS, Decimal.ROUND_HALF_UP)
+    .toNumber();
+}
+
+export function stripeAutoLabel(feePercent: number = DEFAULT_STRIPE_FX_SPREAD_PERCENT): string {
+  const fee = sanitizeSpread(feePercent);
+  const text = Number.isInteger(fee) ? String(fee) : String(fee).replace(".", ",");
+  return `Stripe Auto (includes ${text}% conversion fee)`;
 }
 
 function positiveRate(value: unknown): number | undefined {
@@ -153,15 +175,23 @@ export function toEurFromPerEur(perEur: number): number {
   return roundFxRate(new Decimal(1).div(perEur));
 }
 
+function toEurAfterStripeFee(baseToEur: number, currency: Currency, factor: Decimal): number {
+  if (currency === "UAH") {
+    const invoiceUah = new Decimal(1)
+      .div(baseToEur)
+      .times(factor)
+      .toDecimalPlaces(STRIPE_UAH_QUOTE_DECIMALS, Decimal.ROUND_HALF_UP);
+    return roundFxRate(new Decimal(1).div(invoiceUah));
+  }
+  return roundFxRate(new Decimal(baseToEur).div(factor));
+}
+
 export function applyStripeSpread(
   rates: ExchangeRates,
   spreadPercent: number = DEFAULT_STRIPE_FX_SPREAD_PERCENT,
 ): ExchangeRates {
   const spread = sanitizeSpread(spreadPercent);
-  const factor = new Decimal(1).plus(new Decimal(spread).div(100));
-  if (factor.lte(0)) {
-    throw new Error("Stripe FX spread must leave a positive rate.");
-  }
+  const factor = stripeFeeFactor(spread);
 
   const toEur = { EUR: 1 } as Record<Currency, number>;
   for (const currency of CURRENCIES) {
@@ -170,7 +200,7 @@ export function applyStripeSpread(
     if (!Number.isFinite(current) || current <= 0) {
       throw new Error(`Missing ${currency} rate.`);
     }
-    toEur[currency] = new Decimal(current).times(factor).toDecimalPlaces(8, Decimal.ROUND_HALF_UP).toNumber();
+    toEur[currency] = toEurAfterStripeFee(current, currency, factor);
   }
 
   return {
@@ -222,7 +252,7 @@ export function composeStripeRates(input: {
     if (currency === BASE_CURRENCY) continue;
     const base = input.publishedBases?.[currency];
     if (typeof base === "number" && Number.isFinite(base) && base > 0) {
-      published[currency] = roundFxRate(new Decimal(base).times(factor));
+      published[currency] = toEurAfterStripeFee(base, currency, factor);
     }
   }
   if (hasRate(published)) rates = overlayToEur(rates, published);
@@ -319,25 +349,6 @@ export function publishedEurRate(payload: unknown): number | undefined {
   return positiveRate(rates?.eur ?? rates?.EUR);
 }
 
-function commercialUah(row: { rateCross?: unknown; rateBuy?: unknown; rateSell?: unknown }): number | undefined {
-  const buy = positiveRate(row.rateBuy);
-  const sell = positiveRate(row.rateSell);
-  if (buy !== undefined && sell !== undefined) {
-    return new Decimal(buy).plus(sell).div(2).toNumber();
-  }
-  return positiveRate(row.rateCross) ?? sell ?? buy;
-}
-
-export function uahPerEurFromMonobank(payload: unknown): number | undefined {
-  if (!Array.isArray(payload)) return undefined;
-  const row = payload.find((item) => {
-    if (!item || typeof item !== "object") return false;
-    const pair = item as { currencyCodeA?: unknown; currencyCodeB?: unknown };
-    return pair.currencyCodeA === MONO_EUR && pair.currencyCodeB === MONO_UAH;
-  }) as { rateCross?: unknown; rateBuy?: unknown; rateSell?: unknown } | undefined;
-  return row ? commercialUah(row) : undefined;
-}
-
 export function uahPerUnitFromNbu(payload: unknown, code: "EUR" | "USD"): number | undefined {
   if (!Array.isArray(payload)) return undefined;
   const row = payload.find((item) => item && typeof item === "object" && (item as { cc?: unknown }).cc === code) as
@@ -364,7 +375,6 @@ export function perEurFromFrankfurter(payload: unknown): {
 
 export function buildMarketRates(input: {
   frankfurter?: unknown;
-  monobank?: unknown;
   nbu?: unknown;
   erApi?: unknown;
   now?: string;
@@ -379,15 +389,17 @@ export function buildMarketRates(input: {
   }
 
   const frankfurter = perEurFromFrankfurter(input.frankfurter);
-  const uahPerEur = uahPerEurFromMonobank(input.monobank) ?? uahPerUnitFromNbu(input.nbu, "EUR");
-  const usdLive = Boolean(frankfurter.usdPerEur) || Boolean(base);
-  const uahLive = Boolean(uahPerEur) || Boolean(base);
+  const nbuEur = uahPerUnitFromNbu(input.nbu, "EUR");
+  const nbuUsd = uahPerUnitFromNbu(input.nbu, "USD");
+  const usdLive = Boolean(frankfurter.usdPerEur) || Boolean(nbuEur && nbuUsd) || Boolean(base);
+  const uahLive = Boolean(nbuEur) || Boolean(base);
   if (!usdLive || !uahLive) return null;
 
   const toEur = { ...(base?.toEur ?? LAST_RESORT_RATES.toEur), EUR: 1 as const };
   if (frankfurter.usdPerEur) toEur.USD = toEurFromPerEur(frankfurter.usdPerEur);
+  else if (nbuEur && nbuUsd) toEur.USD = roundFxRate(new Decimal(nbuUsd).div(nbuEur));
   if (frankfurter.plnPerEur) toEur.PLN = toEurFromPerEur(frankfurter.plnPerEur);
-  if (uahPerEur) toEur.UAH = toEurFromPerEur(uahPerEur);
+  if (nbuEur) toEur.UAH = toEurFromPerEur(nbuEur);
 
   return {
     base: BASE_CURRENCY,
@@ -437,15 +449,14 @@ export async function fetchStripeAwareRates(options?: {
   const spreadPercent = sanitizeSpread(options?.spreadPercent);
   const secret = options?.secretKey?.trim() ?? "";
 
-  const [frankfurter, monobank, nbu, erApi] = await Promise.all([
+  const [frankfurter, nbu, erApi] = await Promise.all([
     fetchJson(FRANKFURTER_URL, undefined, fetchImpl, mode),
-    fetchJson(MONOBANK_URL, undefined, fetchImpl, mode),
     fetchJson(NBU_URL, undefined, fetchImpl, mode),
     fetchJson(ER_API_URL, undefined, fetchImpl, mode),
   ]);
 
   const market =
-    buildMarketRates({ frankfurter, monobank, nbu, erApi, now: options?.now }) ?? {
+    buildMarketRates({ frankfurter, nbu, erApi, now: options?.now }) ?? {
       ...LAST_RESORT_RATES,
       stale: true,
     };

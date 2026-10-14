@@ -159,7 +159,7 @@ describe("parseBackup", () => {
         toEur: { EUR: 1, USD: 0.9016, UAH: 0.02156, PLN: 0.2254 },
         source: "stripe_spread",
         fxMode: "stripe_auto",
-        spreadPercent: -2,
+        spreadPercent: 4,
       }),
     ).toBe(true);
 

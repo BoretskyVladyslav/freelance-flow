@@ -93,7 +93,7 @@ async function loadWidgetFxSettings(
     });
   } catch (error) {
     console.error(
-      "[widget/summary] Shared FX settings are unavailable. Using Stripe auto −2%.",
+      "[widget/summary] Shared FX settings are unavailable. Using Stripe auto (includes 4% conversion fee).",
       error instanceof Error ? error.message : "",
     );
     return DEFAULT_FX_SETTINGS;

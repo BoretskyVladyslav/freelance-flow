@@ -298,7 +298,7 @@ describe("exchange rate helpers", () => {
         fetchedAt: "2026-10-14T00:00:00.000Z",
         toEur: { EUR: 1, USD: 0.92, UAH: 0.022, PLN: 0.23 },
       },
-      -2,
+      4,
     );
 
     const spain = calculateFinancialBreakdown({
@@ -316,18 +316,18 @@ describe("exchange rate helpers", () => {
       taxModel: "fop_3",
     });
 
-    expect(stripe.toEur.USD).toBe(0.9016);
+    expect(stripe.toEur.USD).toBe(0.88461538);
     expect(spain).toMatchObject({
-      grossInBase: 901.6,
-      spainTax: 171.3,
-      companyTax: 219.09,
-      netPayout: 511.21,
+      grossInBase: 884.62,
+      spainTax: 168.08,
+      companyTax: 214.96,
+      netPayout: 501.58,
     });
     expect(fop).toMatchObject({
-      grossInBase: 901.6,
-      companyTax: 270.48,
-      spainTax: 37.87,
-      netPayout: 593.25,
+      grossInBase: 884.62,
+      companyTax: 265.39,
+      spainTax: 37.15,
+      netPayout: 582.08,
     });
   });
 });

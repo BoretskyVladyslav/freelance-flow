@@ -261,7 +261,7 @@ create policy "projects_delete_admin_only"
 create table if not exists public.fx_settings (
   id text primary key,
   mode text not null default 'stripe_auto',
-  spread_percent numeric(8, 4) not null default -2,
+  spread_percent numeric(8, 4) not null default 4,
   updated_at timestamptz not null default now()
 );
 
@@ -272,7 +272,14 @@ alter table public.fx_settings
   add column if not exists usd_eur numeric(18, 8);
 
 alter table public.fx_settings
-  add column if not exists spread_percent numeric(8, 4) not null default -2;
+  add column if not exists spread_percent numeric(8, 4) not null default 4;
+
+alter table public.fx_settings
+  alter column spread_percent set default 4;
+
+update public.fx_settings
+set spread_percent = 4
+where id = 'default' and spread_percent = -2;
 
 do $$
 begin

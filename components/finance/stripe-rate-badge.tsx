@@ -7,8 +7,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useMounted } from "@/hooks/use-mounted";
-import { uahPerUnit, type FxSettings } from "@/lib/exchange-rates";
-import { formatRate } from "@/lib/format";
+import { stripeAutoLabel, uahPerUnit, type FxSettings } from "@/lib/exchange-rates";
+import { formatStripeRate } from "@/lib/format";
 
 function parseUserRate(raw: string): number | null {
   const normalized = raw.trim().replace(/\s/g, "").replace(",", ".");
@@ -99,14 +99,14 @@ export function StripeRateBadge() {
       }}
     >
       <PopoverTrigger
-        className="inline-flex h-8 min-h-11 max-w-full items-center gap-1.5 rounded-lg border border-blue-200 bg-blue-50 px-2.5 text-left text-xs font-medium text-blue-950 md:min-h-8 dark:border-blue-800 dark:bg-blue-950/40 dark:text-blue-100"
+        className="inline-flex min-h-11 max-w-full items-center gap-1.5 rounded-lg border border-blue-200 bg-blue-50 px-2.5 py-1.5 text-left text-xs font-medium text-blue-950 md:min-h-8 dark:border-blue-800 dark:bg-blue-950/40 dark:text-blue-100"
         aria-label="Курс Stripe"
       >
         <Coins className="size-3.5 shrink-0 text-blue-900 dark:text-blue-200" />
-        <span className="truncate">
-          Курс Stripe
+        <span className="min-w-0 whitespace-normal">
+          {fxSettings.mode === "manual" ? "Вручну" : stripeAutoLabel(fxSettings.spreadPercent)}
           {mounted && eurPerUnit !== null && usdToEur !== null
-            ? ` · 1 € = ${formatRate(eurPerUnit)} ₴ · 1 $ = ${formatRate(usdToEur)} €`
+            ? ` · 1 € = ${formatStripeRate(eurPerUnit)} ₴ · 1 $ = ${formatStripeRate(usdToEur)} €`
             : ""}
         </span>
       </PopoverTrigger>
@@ -114,22 +114,22 @@ export function StripeRateBadge() {
         <div>
           <p className="font-medium text-blue-900 dark:text-blue-100">Курс Stripe</p>
           <p className="text-xs text-muted-foreground">
-            {rates.fxMode === "manual"
+            {mode === "manual"
               ? "Вручну, як на екрані Stripe"
               : rates.source === "stripe_settlement"
                 ? "З останнього розрахунку Stripe"
-                : `Авто, з FX комісією ${String(Math.abs(rates.spreadPercent ?? fxSettings.spreadPercent)).replace(".", ",")}%`}
+                : stripeAutoLabel(Number(spreadDraft.replace(",", ".")))}
           </p>
         </div>
 
-        <div className="grid grid-cols-2 gap-1 rounded-lg bg-muted p-1">
+        <div className="grid grid-cols-1 gap-1 rounded-lg bg-muted p-1">
           <button
             type="button"
             className={`rounded-md px-2 py-2 text-xs font-medium ${mode === "stripe_auto" ? "bg-background text-blue-900 shadow-sm" : "text-muted-foreground"}`}
             aria-pressed={mode === "stripe_auto"}
             onClick={() => setMode("stripe_auto")}
           >
-            Stripe Auto
+            Stripe Auto (includes 4% conversion fee)
           </button>
           <button
             type="button"
@@ -142,7 +142,7 @@ export function StripeRateBadge() {
         </div>
         <p className="text-[11px] text-muted-foreground">
           {mode === "stripe_auto"
-            ? "З урахуванням FX комісії Stripe"
+            ? stripeAutoLabel(Number(spreadDraft.replace(",", ".")))
             : "Точний курс з екрана інвойса Stripe"}
         </p>
 

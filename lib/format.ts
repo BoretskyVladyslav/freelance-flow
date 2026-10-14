@@ -84,6 +84,16 @@ export function formatRate(rate: number): string {
   );
 }
 
+/** Stripe invoice quotes, such as 52.0047, shown with at most 4 decimal places. */
+export function formatStripeRate(rate: number): string {
+  return normalizeIntl(
+    new Intl.NumberFormat("uk-UA", {
+      minimumFractionDigits: 4,
+      maximumFractionDigits: 4,
+    }).format(rate),
+  );
+}
+
 export function formatCompactMoney(amount: number, currency: Currency): string {
   return normalizeIntl(
     new Intl.NumberFormat("uk-UA", {
